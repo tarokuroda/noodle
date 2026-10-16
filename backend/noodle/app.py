@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
-from . import account, demo, graph, notes
+from . import account, demo, graph, notes, timeline
 from .db import connect
 from .paths import ROOT
 from .search import search as run_search
@@ -281,3 +281,8 @@ def sync_start(body: SyncIn):
 @app.get("/api/sync/status")
 def sync_status():
     return dict(account.JOB)
+
+
+@app.get("/api/timeline")
+def course_timeline(course: int):
+    return timeline.build(course)

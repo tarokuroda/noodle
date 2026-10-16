@@ -5,6 +5,8 @@ import Ask from "./components/Ask.jsx";
 import Graph from "./components/Graph.jsx";
 import Login from "./components/Login.jsx";
 import Courses from "./components/Courses.jsx";
+import Timeline from "./components/Timeline.jsx";
+import Friends from "./components/Friends.jsx";
 import { api } from "./api.js";
 
 export default function App() {
@@ -158,6 +160,8 @@ export default function App() {
           />
         )}
         {view === "ask" && <Ask course={course} files={files} thread={thread} setThread={setThread} />}
+        {view === "timeline" && <Timeline course={course} onOpenFile={openFile} />}
+        {view === "friends" && <Friends course={course} />}
         {view === "courses" && <Courses auth={auth} onSynced={synced} onRelogin={() => setShowLogin(true)} />}
         {view === "graph" && <Graph course={course} files={files} onOpenFile={openFile} notesVersion={notesVersion} />}
       </main>
