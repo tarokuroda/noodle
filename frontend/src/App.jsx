@@ -3,9 +3,14 @@ import Sidebar from "./components/Sidebar.jsx";
 import { LibraryView } from "./components/Library.jsx";
 import Ask from "./components/Ask.jsx";
 import Graph from "./components/Graph.jsx";
+import Login from "./components/Login.jsx";
+import Courses from "./components/Courses.jsx";
 import { api } from "./api.js";
 
 export default function App() {
+  const [auth, setAuth] = useState(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [filesVersion, setFilesVersion] = useState(0);
   const [courses, setCourses] = useState(null);
   const [courseId, setCourseId] = useState(null);
   const [files, setFiles] = useState([]);
@@ -33,12 +38,17 @@ export default function App() {
   );
 
   useEffect(() => {
-    loadCourses();
+    loadCourses().then(() => {});
+    api("/auth/status").then(setAuth).catch(() => setAuth({ logged_in: true, offline: true }));
   }, [loadCourses]);
 
   useEffect(() => {
+    if (courses && courses.length === 0) setView("courses");
+  }, [courses]);
+
+  useEffect(() => {
     if (courseId) api(`/files?course=${courseId}`).then(setFiles);
-  }, [courseId]);
+  }, [courseId, filesVersion]);
 
   useEffect(() => {
     if (courseId) api(`/notes?course=${courseId}`).then(setNotes);
@@ -95,6 +105,26 @@ export default function App() {
     [courseId, notesChanged, openNote]
   );
 
+  const synced = useCallback(() => {
+    loadCourses();
+    setFilesVersion((v) => v + 1);
+    setNotesVersion((v) => v + 1);
+  }, [loadCourses]);
+
+  if (auth && (!auth.logged_in || showLogin)) {
+    return (
+      <Login
+        initialSite={auth.site}
+        onBack={auth.logged_in ? () => setShowLogin(false) : null}
+        onLoggedIn={(st) => {
+          setAuth(st);
+          setShowLogin(false);
+          setView("courses");
+        }}
+      />
+    );
+  }
+
   return (
     <div className="app">
       <Sidebar
@@ -108,6 +138,9 @@ export default function App() {
         onOpen={openFile}
         onOpenNote={openNote}
         onNewNote={newNote}
+        courses={courses || []}
+        setCourseId={setCourseId}
+        onSync={() => setView("courses")}
       />
       <main className="main">
         {view === "library" && (
@@ -125,6 +158,7 @@ export default function App() {
           />
         )}
         {view === "ask" && <Ask course={course} files={files} thread={thread} setThread={setThread} />}
+        {view === "courses" && <Courses auth={auth} onSynced={synced} onRelogin={() => setShowLogin(true)} />}
         {view === "graph" && <Graph course={course} files={files} onOpenFile={openFile} notesVersion={notesVersion} />}
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}

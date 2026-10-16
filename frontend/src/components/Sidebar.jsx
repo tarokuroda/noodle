@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen, CalendarDays, ChevronDown, ChevronRight, ExternalLink, FileText, Film, Globe, Network,
-  Presentation, Search, Sparkles, Users, File as FileIcon, NotebookPen,
+  Presentation, RefreshCw, Search, Sparkles, Users, File as FileIcon, NotebookPen,
 } from "lucide-react";
 import Logo from "./Logo.jsx";
 import { api, TAGS, tagColor } from "../api.js";
@@ -42,7 +42,7 @@ export function FileRow({ file, active, onOpen, indent = true }) {
   );
 }
 
-export default function Sidebar({ view, setView, course, files, notes = [], openId, openNote, onOpen, onOpenNote, onNewNote }) {
+export default function Sidebar({ view, setView, course, files, notes = [], openId, openNote, onOpen, onOpenNote, onNewNote, courses = [], setCourseId, onSync }) {
   const [tags, setTags] = useState(new Set());
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
@@ -119,8 +119,21 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
       {course && (
         <>
           <div className="course-head">
-            <h2>{course.shortname.split("_")[0]}</h2>
-            <p title={course.fullname}>{course.fullname.replace(/^[A-Z]{4}\d{4}:\s*/, "")}</p>
+            <div>
+              {courses.length > 1 ? (
+                <select value={course.id} onChange={(e) => setCourseId(+e.target.value)} aria-label="Course">
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>{c.shortname.split("_")[0]}</option>
+                  ))}
+                </select>
+              ) : (
+                <h2>{course.shortname.split("_")[0]}</h2>
+              )}
+              <p title={course.fullname}>{course.fullname.replace(/^[A-Z]{4}\d{4}:\s*/, "")}</p>
+            </div>
+            <button className={`btn sync-btn ${view === "courses" ? "primary" : ""}`} onClick={onSync} title="Choose courses and sync">
+              <RefreshCw size={14} /> Sync
+            </button>
           </div>
           <div className="search">
             <Search size={16} />

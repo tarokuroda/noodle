@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
-from . import demo, graph, notes
+from . import account, demo, graph, notes
 from .db import connect
 from .paths import ROOT
 from .search import search as run_search
@@ -48,7 +48,8 @@ def courses():
         "(SELECT COUNT(*) FROM files f WHERE f.course_id=c.id) AS files, "
         "(SELECT COUNT(*) FROM pages p JOIN files f ON f.id=p.file_id WHERE f.course_id=c.id) AS pages "
         "FROM courses c ORDER BY c.shortname").fetchall()
-    return [dict(r) for r in rows]
+    picked = set(account.config().get("courses") or [])
+    return [dict(r) for r in rows if not picked or r["id"] in picked]
 
 
 @app.get("/api/files")
@@ -226,3 +227,57 @@ def file_note(fid: int, create: bool = False):
     row = file_row(fid)
     p = notes.file_note(row["course_id"], row, create=create)
     return {"path": p.relative_to(ROOT).as_posix() if p else None}
+
+
+# ---------- login, courses, sync ----------
+
+class SiteIn(BaseModel):
+    site: str
+
+
+class LinkIn(BaseModel):
+    link: str
+
+
+class SyncIn(BaseModel):
+    courses: list[int]
+
+
+@app.get("/api/auth/status")
+def auth_status():
+    return account.status()
+
+
+@app.post("/api/auth/start")
+def auth_start(body: SiteIn):
+    try:
+        return account.start_login(body.site)
+    except account.MoodleError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/auth/paste")
+def auth_paste(body: LinkIn):
+    try:
+        return account.finish_login(body.link)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/moodle/courses")
+def moodle_courses():
+    synced = {r["id"] for r in connect().execute("SELECT id FROM courses")}
+    return [{**c, "synced": c["id"] in synced} for c in account.courses()]
+
+
+@app.post("/api/sync")
+def sync_start(body: SyncIn):
+    try:
+        return account.start_sync(body.courses)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/sync/status")
+def sync_status():
+    return dict(account.JOB)
