@@ -1,1 +1,9 @@
 requests
+certifi
+fastapi
+uvicorn
+pymupdf
+numpy
+fastembed
+truststore
+pytest

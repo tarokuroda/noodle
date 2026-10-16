@@ -3,3 +3,8 @@
 # Downloaded course material (copyrighted, never commit)
 vault/
 __pycache__/
+.env
+node_modules/
+frontend/dist/
+.pytest_cache/
+*.part
