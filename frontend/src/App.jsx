@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "./components/Sidebar.jsx";
 import { EmptyLibrary, FileViewer } from "./components/Library.jsx";
+import Ask from "./components/Ask.jsx";
 import { api } from "./api.js";
 
 export default function App() {
@@ -10,6 +11,7 @@ export default function App() {
   const [view, setView] = useState("library");
   const [open, setOpen] = useState(null); // { id, page, nonce }
   const [toast, setToast] = useState(null);
+  const [thread, setThread] = useState([]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -63,6 +65,7 @@ export default function App() {
       <main className="main">
         {view === "library" &&
           (openFile_ ? <FileViewer file={openFile_} open={open} setOpen={setOpen} /> : <EmptyLibrary course={course} />)}
+        {view === "ask" && <Ask course={course} files={files} thread={thread} setThread={setThread} />}
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>

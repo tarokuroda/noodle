@@ -44,6 +44,12 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
   const [current, setCurrent] = useState(1);
   const [pending, setPending] = useState(null);
   const [flash, setFlash] = useState(null);
+  const jumpRef = useRef(null); // page we just jumped to: keep it aligned while pages above finish rendering
+
+  const align = (n) => {
+    const el = scroller.current?.querySelector(`[data-page="${n}"]`);
+    if (el) scroller.current.scrollTop = el.offsetTop - 20;
+  };
 
   useEffect(() => {
     const ro = new ResizeObserver(([e]) => setWidth(Math.max(320, Math.min(980, e.contentRect.width - 48))));
@@ -84,15 +90,24 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
     const target = Math.min(Math.max(1, page || 1), num);
     const el = scroller.current.querySelector(`[data-page="${target}"]`);
     if (el) {
-      scroller.current.scrollTop = el.offsetTop - 20;
+      align(target);
+      jumpRef.current = target;
+      const release = setTimeout(() => (jumpRef.current = null), 3000);
       setCurrent(target);
       if (flashPage !== false && target > 1) {
         setFlash(target);
         const t = setTimeout(() => setFlash(null), 1600);
-        return () => clearTimeout(t);
+        return () => (clearTimeout(t), clearTimeout(release));
       }
+      return () => clearTimeout(release);
     }
   }, [num, page, nonce, file.id]);
+
+  useEffect(() => {
+    if (jumpRef.current) align(jumpRef.current);
+  }, [width, aspect]);
+
+  const onWheel = () => (jumpRef.current = null);
 
   const onScroll = useCallback(() => {
     const sc = scroller.current;
@@ -122,7 +137,7 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
 
   const height = Math.round(width * aspect);
   return (
-    <div className="pdf-scroll" ref={scroller} onScroll={onScroll} onMouseUp={onMouseUp}>
+    <div className="pdf-scroll" ref={scroller} onScroll={onScroll} onWheel={onWheel} onMouseDown={onWheel} onMouseUp={onMouseUp}>
       <Document
         key={file.id}
         file={`/api/files/${file.id}/raw`}
@@ -138,7 +153,13 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
             style={{ width, minHeight: height }}
           >
             {visible.has(n) && (
-              <Page pageNumber={n} width={width} renderAnnotationLayer={false} loading={<div style={{ height }} />} />
+              <Page
+                pageNumber={n}
+                width={width}
+                renderAnnotationLayer={false}
+                loading={<div style={{ height }} />}
+                onRenderSuccess={() => jumpRef.current && jumpRef.current >= n && align(jumpRef.current)}
+              />
             )}
             {highlights
               .filter((h) => h.page === n)

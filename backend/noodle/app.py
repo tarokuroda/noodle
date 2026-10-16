@@ -7,6 +7,7 @@ import os
 import re
 
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
 from . import demo
@@ -91,3 +92,39 @@ def file_open(fid: int):
 @app.get("/api/search")
 def search(q: str, course: int):
     return run_search(q, course)
+
+
+# ---------- Ask (pre-generated answers in this build; retrieval is live) ----------
+
+class AskIn(BaseModel):
+    q: str
+    course: int
+
+
+def _hit(h):
+    return {k: h[k] for k in ("file_id", "name", "kind", "page", "snippet")}
+
+
+@app.get("/api/ask/suggestions")
+def ask_suggestions():
+    return [{"q": q["q"], "kind": q["kind"]} for q in demo.qa().get("questions", [])]
+
+
+@app.post("/api/ask")
+def ask(body: AskIn):
+    conn = connect()
+    course = conn.execute("SELECT shortname FROM courses WHERE id=?", (body.course,)).fetchone()
+    name = (course["shortname"] if course else "course").split("_")[0]
+    item = demo.match_question(body.q)
+    hits = run_search(item.get("search", item["q"]) if item else body.q, body.course)
+    out = {"q": body.q, "course": name, "retrieved": [_hit(h) for h in hits[:5]], "suggestions": ask_suggestions()}
+    if item is None:
+        return {**out, "kind": "unknown"}
+    if item["kind"] == "not_found":
+        return {**out, "kind": "not_found", "closest": [_hit(h) for h in hits[:4]]}
+    citations = []
+    for n, cite in enumerate(item["citations"], 1):
+        row = conn.execute("SELECT id FROM files WHERE path=?", (cite["path"],)).fetchone()
+        if row:
+            citations.append({"n": n, "file_id": row["id"], "page": cite["page"], "label": cite["label"]})
+    return {**out, "kind": "answer", "answer": item["answer"], "citations": citations}

@@ -4,7 +4,7 @@
     {
       "name": "backend",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "uvicorn", "noodle.app:app", "--app-dir", "backend", "--port", "8765", "--reload", "--reload-dir", "backend"],
+      "runtimeArgs": ["-m", "uvicorn", "noodle.app:app", "--app-dir", "backend", "--port", "8765"],
       "port": 8765
     },
     {
