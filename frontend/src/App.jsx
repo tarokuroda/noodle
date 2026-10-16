@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Sidebar from "./components/Sidebar.jsx";
+import { Menu } from "lucide-react";
+import Sidebar, { NAV } from "./components/Sidebar.jsx";
+import Logo from "./components/Logo.jsx";
 import { LibraryView } from "./components/Library.jsx";
 import Ask from "./components/Ask.jsx";
 import Graph from "./components/Graph.jsx";
@@ -25,11 +27,23 @@ export default function App() {
   const [notesVersion, setNotesVersion] = useState(0);
   const [sideNote, setSideNote] = useState(null);
   const [mainNote, setMainNote] = useState(null);
+  const [navOpen, setNavOpen] = useState(false); // the sidebar as a drawer on narrow screens
 
+  const toastTimer = useRef(null);
   const showToast = useCallback((msg) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2600);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
   }, []);
+
+  // the drawer closes once you've picked something from it
+  useEffect(() => setNavOpen(false), [view, open?.id, sideNote, mainNote, courseId]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e) => e.key === "Escape" && setNavOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navOpen]);
 
   const loadCourses = useCallback(
     () =>
@@ -150,7 +164,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${navOpen ? "nav-open" : ""}`}>
       <Sidebar
         view={view}
         setView={setView}
@@ -167,7 +181,16 @@ export default function App() {
         onSync={() => setView("courses")}
         profile={auth?.profile}
       />
+      <div className="scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />
       <main className="main">
+        <div className="mobile-bar">
+          <button className="icon-btn" onClick={() => setNavOpen(true)} aria-label="Open the menu" aria-expanded={navOpen}>
+            <Menu size={22} />
+          </button>
+          <Logo size={26} />
+          <span className="brand-name">Noodle</span>
+          <span className="mobile-where">{view === "courses" ? "Sync" : NAV.find((n) => n.id === view)?.label}</span>
+        </div>
         {view === "library" && (
           <LibraryView
             course={course}
@@ -180,6 +203,7 @@ export default function App() {
             onOpenFile={openFile}
             onOpenNote={openNote}
             onNotesChanged={notesChanged}
+            onNavigate={setView}
           />
         )}
         {view === "ask" && <Ask course={course} files={files} thread={thread} setThread={setThread} />}
@@ -190,7 +214,9 @@ export default function App() {
           ) : (
             <FriendsPreview course={course} />
           ))}
-        {view === "courses" && <Courses auth={auth} onSynced={synced} onRelogin={() => setShowLogin(true)} />}
+        {view === "courses" && (
+          <Courses auth={auth} onSynced={synced} onRelogin={() => setShowLogin(true)} onOpenLibrary={() => setView("library")} />
+        )}
         {view === "graph" && <Graph course={course} files={files} onOpenFile={openFile} notesVersion={notesVersion} />}
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}

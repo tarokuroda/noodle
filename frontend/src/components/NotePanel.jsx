@@ -19,13 +19,14 @@ function toMarkdown(text) {
 
 const editorTheme = EditorView.theme({
   "&": { fontSize: "15px", background: "transparent" },
-  ".cm-content": { fontFamily: "Nunito, sans-serif", padding: "18px 0", caretColor: "#4f5bd5" },
+  ".cm-content": { fontFamily: "Nunito, sans-serif", padding: "18px 0", caretColor: "var(--indigo)" },
   ".cm-line": { padding: "0 24px", lineHeight: "1.65" },
   "&.cm-focused": { outline: "none" },
-  ".cm-tooltip-autocomplete": { borderRadius: "12px", border: "1px solid #e3e6ef", boxShadow: "0 8px 24px rgba(30,34,53,.12)", overflow: "hidden" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { background: "rgba(79, 91, 213, 0.2) !important" },
+  ".cm-tooltip-autocomplete": { borderRadius: "12px", border: "1px solid var(--line)", boxShadow: "var(--shadow)", overflow: "hidden" },
   ".cm-tooltip-autocomplete > ul > li": { padding: "6px 12px !important", fontFamily: "Nunito, sans-serif" },
-  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { background: "#eceefc !important", color: "#1e2235 !important" },
-  ".cm-completionDetail": { color: "#8b93a7", marginLeft: "8px", fontStyle: "normal" },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { background: "var(--indigo-soft) !important", color: "var(--ink) !important" },
+  ".cm-completionDetail": { color: "var(--ink-3)", marginLeft: "8px", fontStyle: "normal" },
 });
 
 export default function NotePanel({ path, course, onOpenFile, onOpenNote, refreshKey }) {
@@ -112,11 +113,21 @@ export default function NotePanel({ path, course, onOpenFile, onOpenNote, refres
     }
   };
 
-  if (!note) return <div className="note-panel" />;
+  if (!note)
+    return (
+      <div className="note-panel" aria-busy="true">
+        <div className="note-loading" aria-hidden="true">
+          <div className="skeleton" style={{ width: "45%", height: 20 }} />
+          <div className="skeleton" style={{ width: "90%" }} />
+          <div className="skeleton" style={{ width: "75%" }} />
+          <div className="skeleton" style={{ width: "82%" }} />
+        </div>
+      </div>
+    );
   return (
     <div className="note-panel">
       <div className="bar">
-        <NotebookPen size={18} color="#b7860b" />
+        <NotebookPen size={18} className="note-icon" />
         <div className="title">
           <h1>{note.title}</h1>
           <p>{editing ? (saved ? "Saved to your notes folder" : "Saving…") : "Markdown note · opens in Obsidian too"}</p>
@@ -128,12 +139,12 @@ export default function NotePanel({ path, course, onOpenFile, onOpenNote, refres
         ) : (
           <>
             {REAL_FRIENDS && (
-              <button className="btn" onClick={() => setSharing(true)} title="Share this note and its highlights with friends">
-                <Share2 size={14} /> Share
+              <button className="btn" onClick={() => setSharing(true)} title="Share this note and its highlights with friends" aria-label="Share">
+                <Share2 size={14} /> <span className="lbl">Share</span>
               </button>
             )}
-            <button className="btn" onClick={() => setEditing(true)}>
-              <Pencil size={14} /> Edit
+            <button className="btn" onClick={() => setEditing(true)} aria-label="Edit">
+              <Pencil size={14} /> <span className="lbl">Edit</span>
             </button>
           </>
         )}

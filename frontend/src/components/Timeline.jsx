@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BellRing, CheckCircle2, CircleDashed, ExternalLink, FileText, PencilLine, RefreshCw, WifiOff } from "lucide-react";
+import { BellRing, CalendarCheck, CheckCircle2, CircleDashed, ExternalLink, FileText, PencilLine, RefreshCw, WifiOff } from "lucide-react";
 import { api, tagColor } from "../api.js";
 
 const DAY = 86400;
@@ -38,8 +38,8 @@ const courseColor = (code) => COURSE_COLORS[[...(code || "")].reduce((h, c) => (
 function CourseChip({ code }) {
   if (!code) return null;
   return (
-    <span className="course-chip" style={{ color: courseColor(code) }}>
-      <i style={{ background: courseColor(code) }} />
+    <span className="course-chip" style={{ "--c": courseColor(code) }}>
+      <i />
       {code}
     </span>
   );
@@ -56,10 +56,12 @@ function Status({ item }) {
   );
 }
 
-function Item({ it, today, onOpenFile }) {
+function Item({ it, today, now, onOpenFile }) {
   const timed = !it.allday;
+  // a deadline in the next two days that isn't done yet
+  const soon = it.kind === "deadline" && !it.overdue && it.ts >= now && it.ts - now < 2 * DAY && it.status?.state !== "done";
   return (
-    <div className={`tl-item ${it.kind} ${it.overdue ? "late" : ""}`}>
+    <div className={`tl-item ${it.kind} ${it.overdue ? "late" : ""} ${soon ? "soon" : ""}`}>
       <div className="tl-date">
         {fmtDay(it.ts)}
         <span>{fmtWeekday(it.ts)}</span>
@@ -98,7 +100,7 @@ function Item({ it, today, onOpenFile }) {
             <div className="tl-meta">
               <span>
                 {it.label ? `${it.label} ` : ""}
-                {timed ? fmtTime(it.ts) : ""} · {relative(it.ts, today)}
+                {timed ? fmtTime(it.ts) : ""} · <span className={soon ? "when-soon" : ""}>{relative(it.ts, today)}</span>
               </span>
               <Status item={it} />
               <span className="tl-actions">
@@ -121,7 +123,7 @@ function Item({ it, today, onOpenFile }) {
   );
 }
 
-function Months({ items, today, onOpenFile }) {
+function Months({ items, today, now, onOpenFile }) {
   const months = [];
   for (const it of items) {
     const key = fmtMonth(it.ts);
@@ -131,7 +133,7 @@ function Months({ items, today, onOpenFile }) {
   return months.map((m) => (
     <section key={m.key}>
       <h2 className="month">{m.key}</h2>
-      {m.items.map((it) => <Item key={it.id} it={it} today={today} onOpenFile={onOpenFile} />)}
+      {m.items.map((it) => <Item key={it.id} it={it} today={today} now={now} onOpenFile={onOpenFile} />)}
     </section>
   ));
 }
@@ -199,24 +201,32 @@ export default function Timeline({ onOpenFile }) {
             </button>
           ))}
         </div>
-        <button className="btn" onClick={refresh} disabled={busy} title="Check Moodle again">
-          <RefreshCw size={14} className={busy ? "spin" : ""} /> {busy ? "Checking…" : "Refresh"}
+        <button className="btn" onClick={refresh} disabled={busy} title="Check Moodle again" aria-label={busy ? "Checking Moodle" : "Refresh"}>
+          <RefreshCw size={14} className={busy ? "spin" : ""} /> <span className="lbl">{busy ? "Checking…" : "Refresh"}</span>
         </button>
       </div>
       <div className="preview-body">
-        <div className="chips tl-filter">
-          <button className={`chip ${course === "all" ? "on" : ""}`} onClick={() => setCourse("all")} aria-pressed={course === "all"}>
-            All courses <span className="muted">{total}</span>
-          </button>
-          {Object.keys(counts)
-            .sort()
-            .map((c) => (
-              <button key={c} className={`chip ${course === c ? "on" : ""}`} onClick={() => setCourse(c)} aria-pressed={course === c}>
-                <span className="dot" style={{ background: courseColor(c) }} />
-                {c} <span className="muted">{counts[c]}</span>
-              </button>
-            ))}
-        </div>
+        {(total > 0 || course !== "all") && (
+          <div className="chips tl-filter">
+            <button className={`chip ${course === "all" ? "on" : ""}`} onClick={() => setCourse("all")} aria-pressed={course === "all"}>
+              All courses <span className="muted">{total}</span>
+            </button>
+            {Object.keys(counts)
+              .sort()
+              .map((c) => (
+                <button
+                  key={c}
+                  className={`chip ${course === c ? "on" : ""}`}
+                  style={{ "--c": courseColor(c) }}
+                  onClick={() => setCourse(c)}
+                  aria-pressed={course === c}
+                >
+                  <span className="dot" />
+                  {c} <span className="muted">{counts[c]}</span>
+                </button>
+              ))}
+          </div>
+        )}
         <div className="timeline">
           {!data && <p className="muted">Loading your timeline…</p>}
           {data && tab === "upcoming" && (
@@ -224,21 +234,30 @@ export default function Timeline({ onOpenFile }) {
               {overdue.length > 0 && (
                 <section>
                   <h2 className="month late">Overdue</h2>
-                  {overdue.map((it) => <Item key={it.id} it={it} today={today} onOpenFile={onOpenFile} />)}
+                  {overdue.map((it) => <Item key={it.id} it={it} today={today} now={now} onOpenFile={onOpenFile} />)}
                 </section>
               )}
               <div className="today-marker">
                 <span>Today · {date(now).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</span>
               </div>
-              {todays.map((it) => <Item key={it.id} it={it} today={today} onOpenFile={onOpenFile} />)}
-              {todays.length === 0 && <p className="muted small tl-quiet">Nothing due today.</p>}
-              <Months items={later} today={today} onOpenFile={onOpenFile} />
-              {later.length === 0 && <p className="muted">No upcoming deadlines or events{course !== "all" ? ` in ${course}` : ""}. Enjoy it.</p>}
+              {todays.map((it) => <Item key={it.id} it={it} today={today} now={now} onOpenFile={onOpenFile} />)}
+              {todays.length === 0 && later.length > 0 && <p className="muted small tl-quiet">Nothing due today.</p>}
+              <Months items={later} today={today} now={now} onOpenFile={onOpenFile} />
+              {later.length === 0 && (
+                <div className="tl-empty">
+                  <CalendarCheck size={28} />
+                  <h2>{todays.length ? "Nothing else coming up" : "Nothing due"}</h2>
+                  <p>No upcoming deadlines or events{course !== "all" ? ` in ${course}` : ""}. Enjoy it.</p>
+                  <button className="btn" onClick={() => setTab("past")}>
+                    See past weeks and announcements
+                  </button>
+                </div>
+              )}
             </>
           )}
           {data && tab === "past" && (
             <>
-              <Months items={past} today={today} onOpenFile={onOpenFile} />
+              <Months items={past} today={today} now={now} onOpenFile={onOpenFile} />
               {past.length === 0 && <p className="muted">Nothing in the past yet.</p>}
             </>
           )}

@@ -1,16 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, LogIn, RefreshCw } from "lucide-react";
+import { ArrowRight, Check, LogIn, RefreshCw } from "lucide-react";
 import { api } from "../api.js";
 
-export function NoodleProgress({ value }) {
+/** The noodle-wave bar. state: "running" (fills up), "waiting" (no total yet), "done" or "failed" (stops moving). */
+export function NoodleProgress({ value, state = "running" }) {
   return (
-    <div className="noodle-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)}>
+    <div
+      className={`noodle-progress ${state}`}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={state === "waiting" ? undefined : Math.round(value)}
+    >
       <div className="noodle-fill" style={{ width: `${Math.max(3, value)}%` }} />
     </div>
   );
 }
 
-export default function Courses({ auth, onSynced, onRelogin }) {
+export default function Courses({ auth, onSynced, onRelogin, onOpenLibrary }) {
   const [courses, setCourses] = useState(null);
   const [picked, setPicked] = useState(new Set());
   const [job, setJob] = useState(null);
@@ -58,6 +65,7 @@ export default function Courses({ auth, onSynced, onRelogin }) {
     });
 
   const pct = job?.total ? (100 * job.done) / job.total : job?.running ? 4 : 100;
+  const state = job?.running ? (job.total ? "running" : "waiting") : job?.error ? "failed" : "done";
   const sorted = courses && [...courses].sort((a, b) => (b.synced || b.selected) - (a.synced || a.selected) || a.shortname.localeCompare(b.shortname));
 
   return (
@@ -70,8 +78,8 @@ export default function Courses({ auth, onSynced, onRelogin }) {
             {auth?.token && ` · key ${auth.token}`}
           </p>
         </div>
-        <button className="btn" onClick={onRelogin}>
-          <LogIn size={14} /> Use a different account
+        <button className="btn" onClick={onRelogin} aria-label="Use a different account">
+          <LogIn size={14} /> <span className="lbl">Use a different account</span>
         </button>
       </div>
       <div className="courses-body">
@@ -81,12 +89,13 @@ export default function Courses({ auth, onSynced, onRelogin }) {
             <p className="muted">Files over 100 MB stay on Moodle; you can still open them from Noodle.</p>
           </div>
           <button className="btn primary big" onClick={sync} disabled={job?.running || picked.size === 0}>
-            <RefreshCw size={17} className={job?.running ? "spin" : ""} /> {job?.running ? "Syncing…" : `Sync ${picked.size || ""} course${picked.size === 1 ? "" : "s"}`}
+            <RefreshCw size={17} className={job?.running ? "spin" : ""} />
+            {job?.running ? "Syncing…" : picked.size ? `Sync ${picked.size} course${picked.size === 1 ? "" : "s"}` : "Pick a course to sync"}
           </button>
         </div>
         {job && (
           <div className="sync-status" aria-live="polite">
-            <NoodleProgress value={pct} />
+            <NoodleProgress value={pct} state={state} />
             <div className="sync-line">
               {job.running ? (
                 <span>
@@ -95,21 +104,41 @@ export default function Courses({ auth, onSynced, onRelogin }) {
               ) : job.error ? (
                 <span className="error">Sync stopped: {job.error}</span>
               ) : (
-                <span className="sync-done">
-                  <Check size={18} /> {job.message}
-                </span>
+                <>
+                  <span className="sync-done">
+                    <Check size={18} /> {job.message}
+                  </span>
+                  {onOpenLibrary && (
+                    <button className="btn small-btn" onClick={onOpenLibrary}>
+                      Open the library <ArrowRight size={14} />
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
         )}
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
         <div className="course-list">
-          {!courses && !error && <p className="muted">Loading your courses from Moodle…</p>}
+          {!courses && !error && (
+            <>
+              <p className="muted small">Asking Moodle for your courses. Some Moodle sites take up to half a minute.</p>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="course-row skeleton" aria-hidden="true" />
+              ))}
+            </>
+          )}
+          {courses?.length === 0 && (
+            <div className="notice">
+              <b>Moodle didn't list any courses.</b> If you're offline, the courses already on your laptop still work in the
+              Library; come back here to sync once you're online.
+            </div>
+          )}
           {sorted?.map((c) => (
             <label key={c.id} className={`course-row ${picked.has(c.id) ? "on" : ""}`}>
               <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} />
               <span className="course-code">{c.shortname.split("_")[0]}</span>
-              <span className="course-name">{c.fullname.replace(/^[A-Z]{4}\d{4}:\s*/, "")}</span>
+              <span className="course-name" title={c.fullname}>{c.fullname.replace(/^[A-Z]{4}\d{4}:\s*/, "")}</span>
               {c.synced && <span className="badge synced">On your laptop</span>}
             </label>
           ))}

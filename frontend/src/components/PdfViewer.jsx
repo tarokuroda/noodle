@@ -152,8 +152,8 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
         key={file.id}
         file={`/api/files/${file.id}/raw`}
         onLoadSuccess={onLoad}
-        loading={<div className="pdf-page" style={{ width, height }} />}
-        error={<p className="muted" style={{ textAlign: "center" }}>This PDF couldn't be opened.</p>}
+        loading={<div className="pdf-page pdf-loading" style={{ width, height }} aria-label="Opening the PDF" />}
+        error={<p className="muted pdf-error">This PDF couldn't be opened.</p>}
       >
         {Array.from({ length: num }, (_, i) => i + 1).map((n) => (
           <div
@@ -167,7 +167,7 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
                 pageNumber={n}
                 width={width}
                 renderAnnotationLayer={false}
-                loading={<div style={{ height }} />}
+                loading={<div className="pdf-loading" style={{ height }} />}
                 onRenderSuccess={() => jumpRef.current && jumpRef.current >= n && align(jumpRef.current)}
               />
             )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { api } from "../api.js";
 import Logo from "./Logo.jsx";
@@ -9,6 +9,12 @@ export default function Login({ initialSite, onLoggedIn, onBack }) {
   const [started, setStarted] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const pasteBox = useRef(null);
+
+  // when you come back from Moodle with the link copied, the paste box is ready for Ctrl+V
+  useEffect(() => {
+    if (started) pasteBox.current?.focus();
+  }, [started]);
 
   const openLogin = async () => {
     setError(null);
@@ -73,7 +79,15 @@ export default function Login({ initialSite, onLoggedIn, onBack }) {
             <form onSubmit={submit}>
               <b>Paste it here.</b>
               <div className="paste">
-                <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="moodlemobile://token=…" aria-label="Moodle app link" />
+                <input
+                  ref={pasteBox}
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="moodlemobile://token=…"
+                  aria-label="Moodle app link"
+                  spellCheck={false}
+                  autoComplete="off"
+                />
                 <button className="btn yellow" disabled={busy || !link.trim()}>Log in</button>
               </div>
             </form>

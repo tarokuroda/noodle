@@ -16,7 +16,12 @@ from urllib.parse import unquote
 
 import certifi
 import requests
+import truststore
 from requests.adapters import HTTPAdapter
+
+# Trust the Windows certificate store everywhere, before any SSLContext exists: injecting it later (the embedding
+# model download does) breaks contexts made earlier with a RecursionError on every new connection.
+truststore.inject_into_ssl()
 
 SERVICE = "moodle_mobile_app"
 TIMEOUT = 60

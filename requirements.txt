@@ -6,4 +6,6 @@ pymupdf
 numpy
 fastembed
 truststore
+python-pptx
+pywin32; sys_platform == "win32"
 pytest
