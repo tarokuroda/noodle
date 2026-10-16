@@ -376,5 +376,8 @@ def friends_import(body: FriendId):
 # ---------- the built app (npm run build) on the same port; keep this last so /api routes win ----------
 _DIST = ROOT / "frontend" / "dist"
 if _DIST.exists():
+    import mimetypes
     from fastapi.staticfiles import StaticFiles
+    # Windows can map .mjs to text/plain in the registry, and browsers refuse to run the PDF worker (pdf.worker.mjs) as that
+    mimetypes.add_type("text/javascript", ".mjs")
     app.mount("/", StaticFiles(directory=_DIST, html=True), name="app")
