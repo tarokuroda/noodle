@@ -4,14 +4,14 @@ import {
   Presentation, RefreshCw, Search, Sparkles, Users, File as FileIcon, NotebookPen,
 } from "lucide-react";
 import Logo from "./Logo.jsx";
-import { api, TAGS, tagColor } from "../api.js";
+import { api, REAL_FRIENDS, TAGS, tagColor } from "../api.js";
 
 const NAV = [
   { id: "library", label: "Library", icon: BookOpen },
   { id: "ask", label: "Ask", icon: Sparkles },
   { id: "graph", label: "Graph", icon: Network },
   { id: "timeline", label: "Timeline", icon: CalendarDays },
-  { id: "friends", label: "Friends", icon: Users, preview: true },
+  { id: "friends", label: "Friends", icon: Users, preview: !REAL_FRIENDS },
 ];
 
 export const KIND_ICON = { pdf: FileText, page: Globe, office: Presentation, media: Film, other: FileIcon, note: NotebookPen };
@@ -42,7 +42,7 @@ export function FileRow({ file, active, onOpen, indent = true }) {
   );
 }
 
-export default function Sidebar({ view, setView, course, files, notes = [], openId, openNote, onOpen, onOpenNote, onNewNote, courses = [], setCourseId, onSync }) {
+export default function Sidebar({ view, setView, course, files, notes = [], openId, openNote, onOpen, onOpenNote, onNewNote, courses = [], setCourseId, onSync, profile }) {
   const [tags, setTags] = useState(new Set());
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
@@ -106,6 +106,7 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
       <div className="brand">
         <Logo />
         <span className="brand-name">Noodle</span>
+        {profile && <span className="badge profile" title="A second person on this laptop (NOODLE_PROFILE)">{profile}</span>}
       </div>
       <nav className="nav">
         {NAV.map(({ id, label, icon: Icon, preview }) => (

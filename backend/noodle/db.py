@@ -1,9 +1,9 @@
-"""SQLite in .noodle/noodle.db: the file index, page text + FTS5, embeddings and highlights."""
+"""SQLite in .noodle/noodle.db (or a profile's own copy): the file index, page text + FTS5, embeddings and highlights."""
 
 import sqlite3
 import threading
 
-from .paths import DB_PATH
+from .paths import DB_PATH, MAIN_DB_PATH, PROFILE
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS courses(
@@ -24,9 +24,11 @@ CREATE TABLE IF NOT EXISTS highlights(
 # Columns added after the first release; ensure_columns() adds them to an existing database.
 ADDED_COLUMNS = {
     "files": {"twin_id": "INTEGER", "pdf": "TEXT"},  # a .pptx with a same-name PDF; a converted deck's PDF
+    "highlights": {"friend_id": "TEXT", "friend_name": "TEXT", "share_id": "TEXT"},  # set on a friend's highlight
 }
 
 _local = threading.local()
+_seed_lock = threading.Lock()
 
 
 def ensure_columns(conn):
@@ -38,10 +40,27 @@ def ensure_columns(conn):
     conn.commit()
 
 
+def seed_profile():
+    """A new profile starts with the main library (same synced files), but none of its highlights."""
+    with _seed_lock:
+        if not PROFILE or DB_PATH.exists() or not MAIN_DB_PATH.exists():
+            return
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        src, dst = sqlite3.connect(MAIN_DB_PATH), sqlite3.connect(DB_PATH)
+        try:
+            src.backup(dst)
+            dst.execute("DELETE FROM highlights")
+            dst.commit()
+        finally:
+            src.close()
+            dst.close()
+
+
 def connect():
     """One connection per thread (FastAPI runs sync routes in a thread pool)."""
     conn = getattr(_local, "conn", None)
     if conn is None:
+        seed_profile()
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(DB_PATH, timeout=30)
         conn.row_factory = sqlite3.Row

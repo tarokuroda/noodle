@@ -7,7 +7,8 @@ import Login from "./components/Login.jsx";
 import Courses from "./components/Courses.jsx";
 import Timeline from "./components/Timeline.jsx";
 import Friends from "./components/Friends.jsx";
-import { api } from "./api.js";
+import FriendsPreview from "./components/FriendsPreview.jsx";
+import { api, REAL_FRIENDS } from "./api.js";
 
 export default function App() {
   const [auth, setAuth] = useState(null);
@@ -164,6 +165,7 @@ export default function App() {
         courses={courses || []}
         setCourseId={setCourseId}
         onSync={() => setView("courses")}
+        profile={auth?.profile}
       />
       <main className="main">
         {view === "library" && (
@@ -182,7 +184,12 @@ export default function App() {
         )}
         {view === "ask" && <Ask course={course} files={files} thread={thread} setThread={setThread} />}
         {view === "timeline" && <Timeline onOpenFile={openFile} />}
-        {view === "friends" && <Friends course={course} />}
+        {view === "friends" &&
+          (REAL_FRIENDS ? (
+            <Friends course={course} onOpenNote={openNote} onNotesChanged={notesChanged} showToast={showToast} />
+          ) : (
+            <FriendsPreview course={course} />
+          ))}
         {view === "courses" && <Courses auth={auth} onSynced={synced} onRelogin={() => setShowLogin(true)} />}
         {view === "graph" && <Graph course={course} files={files} onOpenFile={openFile} notesVersion={notesVersion} />}
       </main>

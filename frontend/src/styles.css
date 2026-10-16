@@ -424,3 +424,38 @@ h1, h2, h3, .display { font-family: "Fredoka", "Nunito", sans-serif; font-weight
 .tl-error { color: var(--chili); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- friends ---------- */
+.badge.profile { background: var(--indigo-soft); color: var(--indigo); margin-left: 2px; }
+.hl.friend { background: rgba(214, 51, 108, 0.26); }
+.friends-setup { max-width: 620px; display: grid; gap: 14px; background: var(--mist); border-radius: var(--r-lg); padding: 22px 24px; }
+.friends-setup h2 { margin: 0; font-size: 19px; display: flex; gap: 8px; align-items: center; }
+.friends-setup p { margin: 0; color: var(--ink-2); }
+.friends-setup label { display: grid; gap: 6px; font-weight: 800; font-size: 14px; }
+.friends-setup input { border: 1px solid var(--line); border-radius: var(--r-md); padding: 9px 12px; background: var(--paper); font-weight: 600; }
+.friends-setup ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.friends-setup .btn { justify-self: start; }
+.friend > div { flex: 1; min-width: 0; }
+.friend.me { background: var(--paper); border-radius: var(--r-md); padding: 10px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.friend-list h2 + .muted { margin: 0 0 8px; }
+.friend-list h2:not(:first-child) { margin-top: 18px; }
+.small-btn { padding: 4px 12px; font-size: 13px; }
+.avatar.sm { width: 22px; height: 22px; font-size: 11px; }
+.feed-head { font-size: 16px; display: flex; gap: 8px; align-items: center; margin: 4px 0 0; }
+.feed-head:not(:first-child) { margin-top: 18px; }
+.feed-card .course-chip { margin-left: auto; }
+.feed-actions { display: grid; gap: 4px; justify-items: end; }
+.feed-item.sent { background: var(--mist); border-color: transparent; padding: 10px 16px; }
+.feed-empty { padding: 18px; border: 1px dashed var(--line); border-radius: var(--r-lg); margin: 0; }
+.error { color: var(--chili); font-weight: 700; margin: 0; }
+.modal-back { position: fixed; inset: 0; background: rgba(30, 34, 53, 0.28); display: grid; place-items: center; z-index: 50; }
+.modal { position: relative; width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 64px); overflow-y: auto; background: var(--paper); border-radius: var(--r-lg); padding: 22px 24px; box-shadow: 0 20px 60px rgba(30, 34, 53, 0.25); }
+.modal h2 { margin: 0 0 8px; display: flex; gap: 8px; align-items: center; font-size: 20px; }
+.modal h3 { font-size: 14px; margin: 14px 0 6px; display: flex; align-items: center; gap: 10px; color: var(--ink-2); }
+.modal code { font-size: 12px; word-break: break-all; }
+.pick-list { display: grid; gap: 2px; }
+.pick-list.notes { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px; }
+.pick { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r-sm); font-weight: 700; cursor: pointer; }
+.pick:hover { background: var(--mist); }
+.link-btn { border: 0; background: none; color: var(--indigo); font-weight: 800; font-size: 13px; padding: 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }

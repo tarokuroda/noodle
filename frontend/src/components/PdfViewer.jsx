@@ -177,8 +177,8 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
                 h.rects.map((r, i) => (
                   <div
                     key={`${h.id}-${i}`}
-                    className="hl"
-                    title={h.text}
+                    className={`hl ${h.friend_name ? "friend" : ""}`}
+                    title={h.friend_name ? `${h.friend_name}: ${h.text}` : h.text}
                     style={{ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` }}
                   />
                 ))

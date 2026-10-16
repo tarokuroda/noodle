@@ -8,6 +8,12 @@
       "port": 8765
     },
     {
+      "name": "friend",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set NOODLE_PROFILE=friend&& python -m uvicorn noodle.app:app --app-dir backend --port 8766"],
+      "port": 8766
+    },
+    {
       "name": "frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],

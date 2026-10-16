@@ -117,3 +117,58 @@ def test_timeline_offline_keeps_cache(tmp_path, monkeypatch):
     monkeypatch.setattr(account, "status", lambda: {"logged_in": True, "userid": 1})
     out = timeline.refresh(Down(), force=True)
     assert out["offline"] and out["fetched_at"] == 1.0
+
+
+def test_friends_share_round_trip(tmp_path, monkeypatch):
+    import sqlite3
+    from noodle import account, db, friends
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript(db.SCHEMA)
+    db.ensure_columns(conn)
+    conn.execute("INSERT INTO courses VALUES(1, 'MECH0024_25-26', 'Fluids', 'vault/MECH0024_25-26', 0)")
+    conn.execute("INSERT INTO files(id, course_id, path, name, ext, kind, status, hash) VALUES "
+                 "(7, 1, 'vault/MECH0024_25-26/Week 8/L7.pdf', 'L7.pdf', 'pdf', 'pdf', 'ok', 'abc')")
+    notes_dir = tmp_path / "vault/MECH0024_25-26/Notes"
+    notes_dir.mkdir(parents=True)
+    note = notes_dir / "Notes on L7.md"
+    note.write_text("# Notes on L7\n\n> nozzle\n> [[L7.pdf#page=3|p.3]]\n", encoding="utf-8")
+    rel = note.relative_to(tmp_path).as_posix()
+    conn.execute("INSERT INTO highlights(file_id, file_hash, page, rects, text, note_path, created) "
+                 "VALUES(7, 'abc', 3, '[{\"x\": 0.1, \"y\": 0.2, \"w\": 0.3, \"h\": 0.02}]', 'nozzle', ?, 0)", (rel,))
+    monkeypatch.setattr(friends, "connect", lambda: conn)
+    monkeypatch.setattr(friends, "ROOT", tmp_path)
+    monkeypatch.setattr(friends, "NOTES_ROOT", tmp_path)
+    monkeypatch.setattr(friends.notes, "note_path", lambda r: tmp_path / r)
+    shared = tmp_path / "Noodle Friends"
+
+    def be(name):
+        monkeypatch.setattr(friends, "FRIENDS_PATH", tmp_path / f"{name}.json")
+
+    be("maya")
+    maya = friends.setup("Maya", str(shared))["me"]
+    be("taro")
+    taro = friends.setup("Taro", str(shared))["me"]
+    assert [p["name"] for p in friends.overview()["people"]] == ["Maya"]
+    friends.add(maya["id"])
+    be("maya")
+    friends.add(taro["id"])
+    assert friends.share([rel], [taro["id"]]) == {"id": friends.overview()["sent"][0]["id"], "notes": 1, "highlights": 1}
+    raw = next((shared / "shares").glob("*.json")).read_text(encoding="utf-8")
+    token = account.config().get("token")
+    assert "wstoken" not in raw and (not token or token not in raw)
+
+    be("taro")
+    inbox = friends.overview()["inbox"]
+    assert len(inbox) == 1 and inbox[0]["matched"] == 1 and inbox[0]["from"]["name"] == "Maya"
+    out = friends.import_share(inbox[0]["id"])
+    assert out["matched"] == 1 and (tmp_path / out["notes"][0]).name == "Notes on L7 (from Maya).md"
+    h = conn.execute("SELECT * FROM highlights WHERE friend_name='Maya'").fetchone()
+    assert h["file_id"] == 7 and h["page"] == 3 and h["note_path"] == out["notes"][0]
+    friends.import_share(inbox[0]["id"])  # importing again replaces, doesn't duplicate
+    assert conn.execute("SELECT COUNT(*) FROM highlights WHERE friend_name='Maya'").fetchone()[0] == 1
+
+    # matching falls back to the place in the course, then to the file name
+    assert friends.match_file(conn, {"hash": "zzz", "relpath": "Week 8/L7.pdf"}, "vault/MECH0024_25-26") == 7
+    assert friends.match_file(conn, {"hash": "zzz", "relpath": "moved/L7.pdf", "name": "L7.pdf"}, "vault/MECH0024_25-26") == 7
+    assert friends.match_file(conn, {"hash": "zzz", "relpath": "x.pdf", "name": "x.pdf"}, "vault/MECH0024_25-26") is None

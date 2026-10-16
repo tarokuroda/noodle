@@ -14,7 +14,7 @@ Built for a student hackathon ("something to help students") and tested on UCL M
 - **Course graph.** Every file, note and topic in the module on one map. Files are linked by the topics they share and by your notes; hover to focus, click a topic to see its summary and the files that cover it.
 - **Ask.** Answers come only from your files, with citation chips like "Lecture 7 — p.36" that open the PDF at that page. If the answer isn't in your files, Noodle says so and shows the closest pages instead of guessing.
 - **Timeline.** Every deadline and event from all your Moodle courses in one list, with a **Today** marker, an Upcoming/Past switch and a course filter. Assignments show whether you've submitted. Each item opens its brief in Noodle when it's synced, otherwise its Moodle page. Past weeks, announcements and deadlines of your synced courses fill the Past side.
-- **Coming next (preview page):** Friends, for sharing notes with classmates.
+- **Friends.** Share a note, or all your notes for a course, with classmates. Their highlights show up in pink on your own copy of the slides, and their note lands next to yours, links and all. Only notes and highlights travel, never course files.
 
 ## How the AI works in this build
 
@@ -51,6 +51,20 @@ Prefer the command line? `python sync_check.py --course <id>` runs the same sync
 
 Noodle reads your calendar with read-only Moodle functions, one after another: the deadlines that need you (`core_calendar_get_action_events_by_timesort`), every other event in the same window (`core_calendar_get_calendar_events`), and the submission status of assignments due in the next six months. It looks 30 days back and a year ahead, caches the result in `.noodle/timeline.json` for 10 minutes, refreshes after every Sync, and keeps showing the last saved copy when you're offline.
 
+### Friends
+
+Sharing runs through a folder that you and your friends all sync, such as a UCL OneDrive folder you share with classmates (they add it with **Add shortcut to My files**). No accounts and no server.
+
+- **Set up.** On the Friends page, pick your name and the shared folder. Noodle writes your card to `people/<your code>.json` there; anyone else who sets up Noodle with the same folder appears under **In this folder**, and you **Add** each other.
+- **Share.** Press **Share** on a note (or **Share notes** on the Friends page), tick friends and notes. Noodle writes one file to `shares/`: the notes' Markdown, and for each of your highlights the quote, page, position and the file's content hash and name. Nothing else goes in: no course files, and never your Moodle token.
+- **Receive.** Shares from friends you've added appear under **Shared with you**. **Add to my notes** copies the note into your Notes folder as "… (from Maya)" and puts each highlight on your own copy of the file, found by content hash, else by its place in the course, else by name.
+- **Privacy.** Anyone with access to the folder can read what's shared in it, so share the folder only with friends. Each laptop writes only its own files there, so the cloud drive never has two people editing one file.
+- **Try it on one laptop.** Run a second Noodle as another person with its own database, notes and friends list (kept in `.noodle/profiles/friend/`):
+
+  ```powershell
+  .\start.ps1 -NoodleProfile friend -Port 8766 -NoBuild
+  ```
+
 ### Slides and Word files
 
 - **Conversion.** After a sync, each new or changed `.pptx`/`.ppt`/`.docx`/`.doc` is converted to PDF by the Office already on your laptop, through COM (`pywin32`). Each file is converted in its own child process with a 5-minute timeout, so a stuck Office dialog can't hang the sync, and Noodle never closes a PowerPoint window you had open.
@@ -68,11 +82,12 @@ Noodle reads your calendar with read-only Moodle functions, one after another: t
 | `backend/noodle/convert.py` | Slides and Word files to PDF through Office COM, cached by hash, with a `python-pptx` text fallback. |
 | `backend/noodle/index.py`, `search.py` | PyMuPDF text per page, SQLite FTS5, local embeddings, hybrid ranking (reciprocal rank fusion). |
 | `backend/noodle/timeline.py` | Calendar events, submission status and the synced courses' weeks, cached for offline use. |
+| `backend/noodle/friends.py` | Friends: profile cards and share bundles in a shared folder, highlight matching by content hash. |
 | `backend/noodle/notes.py`, `graph.py` | Markdown notes with `[[wikilinks]]`, highlight quotes, and the course graph. |
 | `backend/noodle/app.py` | FastAPI routes; also serves the built web app. |
 | `frontend/` | React + Vite: `react-pdf` viewer with a custom highlight layer, `react-force-graph-2d`, CodeMirror with `[[` autocomplete. |
 
-Everything private stays out of git: `vault/` (your course files and notes), `.noodle/` (token, sync manifest, search index, pre-generated demo data) and `.env`.
+Everything private stays out of git: `vault/` (your course files and notes), `.noodle/` (token, sync manifest, search index, converted slides, pre-generated demo data, test profiles) and `.env`.
 
 ## Ground rules we kept
 
@@ -86,5 +101,5 @@ Everything private stays out of git: `vault/` (your course files and notes), `.n
 - The graph shows one course at a time.
 - Converting slides needs Microsoft Office on Windows. Without it, slides are searchable as text but can't be highlighted.
 - Files over 100 MB (like a 494 MB wind-tunnel deck) aren't downloaded, so they aren't converted either.
-- Friends is a preview with sample data.
+- Friends shares notes and highlights through a synced folder, so a share arrives only as fast as the drive syncs, and everyone with access to the folder can read it.
 - The Timeline covers the courses on your Moodle dashboard (plus the ones you sync), not courses you've hidden there.

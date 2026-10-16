@@ -4,8 +4,9 @@ import CodeMirror from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { autocompletion } from "@codemirror/autocomplete";
 import { EditorView } from "@codemirror/view";
-import { Check, FileText, NotebookPen, Pencil } from "lucide-react";
-import { api } from "../api.js";
+import { Check, FileText, NotebookPen, Pencil, Share2 } from "lucide-react";
+import ShareDialog from "./ShareDialog.jsx";
+import { api, REAL_FRIENDS } from "../api.js";
 
 const WIKILINK = /\[\[([^[\]|#]+)(?:#([^[\]|]*))?(?:\|([^[\]]*))?\]\]/g;
 
@@ -31,6 +32,7 @@ export default function NotePanel({ path, course, onOpenFile, onOpenNote, refres
   const [note, setNote] = useState(null);
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(true);
+  const [sharing, setSharing] = useState(false);
   const targets = useRef([]);
   const timer = useRef(null);
   const latest = useRef("");
@@ -124,11 +126,19 @@ export default function NotePanel({ path, course, onOpenFile, onOpenNote, refres
             <Check size={15} /> Done
           </button>
         ) : (
-          <button className="btn" onClick={() => setEditing(true)}>
-            <Pencil size={14} /> Edit
-          </button>
+          <>
+            {REAL_FRIENDS && (
+              <button className="btn" onClick={() => setSharing(true)} title="Share this note and its highlights with friends">
+                <Share2 size={14} /> Share
+              </button>
+            )}
+            <button className="btn" onClick={() => setEditing(true)}>
+              <Pencil size={14} /> Edit
+            </button>
+          </>
         )}
       </div>
+      {sharing && <ShareDialog course={course} initial={[path]} onClose={() => setSharing(false)} />}
       <div className="note-body">
         {editing ? (
           <CodeMirror

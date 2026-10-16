@@ -12,7 +12,7 @@ from pathlib import Path
 from fastapi import HTTPException
 
 from .db import connect
-from .paths import NOTES_DIRNAME, ROOT
+from .paths import NOTES_DIRNAME, NOTES_ROOT, ROOT
 
 WIKILINK = re.compile(r"\[\[([^\[\]|#]+)(?:#([^\[\]|]*))?(?:\|([^\[\]]*))?\]\]")
 
@@ -25,7 +25,7 @@ def course_row(course_id):
 
 
 def notes_dir(course_id):
-    return ROOT / course_row(course_id)["dir"] / NOTES_DIRNAME
+    return NOTES_ROOT / course_row(course_id)["dir"] / NOTES_DIRNAME
 
 
 def list_notes(course_id):

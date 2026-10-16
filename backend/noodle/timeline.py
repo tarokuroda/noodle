@@ -24,9 +24,9 @@ import requests
 from . import demo
 from .db import connect
 from .moodle import MoodleError, load_json, save_json
-from .paths import ROOT, STATE_DIR
+from .paths import ROOT, SHARED_DIR
 
-CACHE_PATH = STATE_DIR / "timeline.json"
+CACHE_PATH = SHARED_DIR / "timeline.json"  # one Moodle account per laptop, so profiles share it
 TTL = 600
 BACK, AHEAD = 30 * 86400, 365 * 86400  # the calendar window around now
 STATUS_DAYS, STATUS_MAX = 180, 12  # submission status for assignments due this soon, at most this many calls

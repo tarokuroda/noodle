@@ -13,11 +13,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
-from . import account, demo, graph, notes, timeline
+from . import account, demo, friends, graph, notes, timeline
 from .convert import app_name
 from .db import connect
 from .index import viewer_for
-from .paths import ROOT
+from .paths import PROFILE, ROOT
 from .search import search as run_search
 
 app = FastAPI(title="Noodle")
@@ -224,7 +224,8 @@ class HighlightIn(BaseModel):
 
 
 def _highlight_out(r):
-    return {"id": r["id"], "page": r["page"], "rects": json.loads(r["rects"]), "text": r["text"], "note_path": r["note_path"]}
+    return {"id": r["id"], "page": r["page"], "rects": json.loads(r["rects"]), "text": r["text"], "note_path": r["note_path"],
+            "friend_name": r["friend_name"]}
 
 
 @app.get("/api/highlights")
@@ -269,7 +270,7 @@ class SyncIn(BaseModel):
 
 @app.get("/api/auth/status")
 def auth_status():
-    return account.status()
+    return {**account.status(), "profile": PROFILE or None}
 
 
 @app.post("/api/auth/start")
@@ -317,6 +318,59 @@ def timeline_items(cached: bool = False):
 def timeline_refresh():
     timeline.refresh(force=True)
     return timeline.build(cached_only=True)
+
+
+# ---------- friends (a shared folder; only notes and highlights travel) ----------
+
+class FriendSetup(BaseModel):
+    name: str
+    folder: str
+
+
+class FriendId(BaseModel):
+    id: str
+
+
+class ShareIn(BaseModel):
+    notes: list[str]
+    to: list[str]
+
+
+def _friends(fn, *args):
+    try:
+        return fn(*args)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/friends")
+def friends_overview():
+    return friends.overview()
+
+
+@app.post("/api/friends/setup")
+def friends_setup(body: FriendSetup):
+    return _friends(friends.setup, body.name, body.folder)
+
+
+@app.post("/api/friends/add")
+def friends_add(body: FriendId):
+    return _friends(friends.add, body.id)
+
+
+@app.post("/api/friends/remove")
+def friends_remove(body: FriendId):
+    return _friends(friends.remove, body.id)
+
+
+@app.post("/api/friends/share")
+def friends_share(body: ShareIn):
+    return _friends(friends.share, body.notes, body.to)
+
+
+@app.post("/api/friends/import")
+def friends_import(body: FriendId):
+    return _friends(friends.import_share, body.id)
 
 
 # ---------- the built app (npm run build) on the same port; keep this last so /api routes win ----------

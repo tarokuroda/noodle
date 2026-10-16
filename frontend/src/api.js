@@ -16,6 +16,9 @@ export async function api(path, { method = "GET", body } = {}) {
   return r.json();
 }
 
+// false: show the old Friends preview page (sample data) instead of real sharing
+export const REAL_FRIENDS = true;
+
 export const TAGS = ["lecture", "tutorial", "past paper", "assignment", "reading", "other"];
 
 export const tagColor = (tag) => `var(--tag-${(tag || "other").replace(" ", "-")})`;
