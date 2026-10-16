@@ -73,7 +73,9 @@ export function FileViewer({ file, open, setOpen, highlights, onHighlight, compa
             className="page-frame"
             title={file.name}
             src={`/api/files/${file.id}/html`}
-            sandbox="allow-popups allow-popups-to-escape-sandbox"
+            // Scripts stay off (no allow-scripts, plus the backend's script-src 'none'). allow-same-origin is
+            // needed because some browsers block every request from an opaque-origin frame: the page came up blank.
+            sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
           />
         )}
       </div>

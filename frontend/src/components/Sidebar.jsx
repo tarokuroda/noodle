@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, CalendarDays, ChevronDown, ChevronsDownUp, ChevronsUpDown, ChevronRight, ExternalLink, FileText, Film, Globe, LoaderCircle, Megaphone, Network,
-  Presentation, RefreshCw, Search, Sparkles, Users, X, File as FileIcon, NotebookPen,
+  Presentation, RefreshCw, Search, Users, X, File as FileIcon, NotebookPen,
 } from "lucide-react";
 import Logo from "./Logo.jsx";
+import ClaudeIcon from "./ClaudeIcon.jsx";
 import { api, REAL_FRIENDS, TAGS, tagColor } from "../api.js";
 
 export const NAV = [
   { id: "library", label: "Library", icon: BookOpen },
-  { id: "ask", label: "Ask", icon: Sparkles },
+  { id: "ask", label: "Ask", icon: ClaudeIcon },
   { id: "graph", label: "Graph", icon: Network },
   { id: "timeline", label: "Timeline", icon: CalendarDays },
   { id: "friends", label: "Friends", icon: Users, preview: !REAL_FRIENDS },
