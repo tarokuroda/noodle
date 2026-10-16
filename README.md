@@ -4,6 +4,8 @@ Moodle hides your course behind a hundred clicks. Noodle syncs it to your laptop
 
 Built for a student hackathon ("something to help students") and tested on UCL Moodle. It works with any Moodle site that allows the official Moodle app.
 
+Noodle is built and tested on Windows. There's a Mac launcher too, but it hasn't been tried on a Mac yet: see [Get started (Mac)](#get-started-mac).
+
 ## What it does
 
 - **One-click sync.** Log in through Moodle's own page, tick your courses, press **Sync**. Files, Moodle pages, section text, assignment briefs, announcements and deadlines land in a tidy folder on your laptop. A second sync only fetches what changed. Files over 100 MB, and the few that Moodle's bot protection blocks, stay listed with an **Open in Moodle** button.
@@ -83,6 +85,35 @@ Sharing runs through a folder that you and your friends all sync, such as a UCL 
 
 **Antivirus HTTPS scanning** (e.g. Avast) re-signs TLS traffic. Noodle's HTTP clients trust the Windows certificate store, so this works out of the box. If `npm install` fails with certificate errors, run it with `NODE_OPTIONS=--use-system-ca`.
 
+## Get started (Mac)
+
+**Not tested on a Mac yet.** Nobody has run Noodle on a Mac so far. The Mac launcher does the same steps as the Windows one, but expect rough edges. If you try it, please tell us what happened (a screenshot of the Terminal window helps).
+
+1. **Download Noodle.** [Download the ZIP](https://github.com/tarokuroda/noodle/archive/refs/heads/main.zip). Safari unzips it into your Downloads folder as `noodle-main`. If yours stays a `.zip`, double-click it.
+2. **Start it.** In the `noodle-main` folder, double-click **Start Noodle** (`Start Noodle.command`). A Terminal window opens.
+   - **macOS blocks it the first time**, because Noodle doesn't come from the App Store or a registered developer. If you see *"Apple could not verify 'Start Noodle.command' is free of malware"*, click **Done**. Then open **System Settings → Privacy & Security**, scroll down to the message about "Start Noodle.command", click **Open Anyway** and enter your Mac password. On macOS 14 (Sonoma) or earlier, you can instead right-click (or Control-click) **Start Noodle**, choose **Open**, then **Open** again. You only do this once.
+   - If macOS asks whether Terminal may access your Downloads or Desktop folder, click **Allow**.
+   - Still won't open? Open **Terminal** (in Applications → Utilities), type `bash` followed by a space, drag **Start Noodle** into the Terminal window and press Return.
+3. **Wait a few minutes, once.** The Terminal window sets Noodle up. The first time, it downloads what it needs (about 300 MB, and Noodle takes about 700 MB of disk). After that, Noodle starts in seconds, and there's a **Noodle** link on your desktop to start it.
+4. **Log in to Moodle.** Noodle opens in your browser. Enter your Moodle site, press **Open Moodle login** and sign in as usual. On the page with the "Click here to launch the app" link, click it. When your browser asks whether to open it in Noodle, choose **Allow** or **Open**. If nothing happens (for example because the Moodle app is installed and opens these links instead), right-click the link, choose **Copy Link**, paste it into Noodle and press **Log in**.
+5. **Sync.** Tick your courses and press **Sync**.
+
+Keep the Terminal window open while you use Noodle. Close it (or press Ctrl+C in it) to stop Noodle. Double-clicking **Start Noodle** while it's already running just opens it again.
+
+Everything Noodle sets up stays inside its folder (Python and its packages in `.venv/`, helper tools in `.noodle/tools/`). Outside the folder there's only the desktop link, and macOS's record of the small `.noodle/Noodle.app` that lets Moodle's "launch the app" link reach Noodle. To uninstall, double-click **Uninstall Noodle** (it removes those two), then drag the folder to the Bin.
+
+**Known gaps on a Mac.** Slides and Word files aren't converted to PDF, because that needs Microsoft Office on Windows. Slides are still searchable and in Ask as their text, one page per slide, but they open as text rather than in the viewer, so you can't highlight them. Word files aren't searchable. The **Open in PowerPoint** button opens the file in whatever app your Mac uses for it (PowerPoint, Keynote, Word or Pages).
+
+### For developers (Mac)
+
+`Start Noodle.command` is a bash script (for the bash 3.2 that ships with macOS) that mirrors `start.ps1`. It uses your `uv` if it's on PATH, otherwise downloads one for Apple silicon or Intel into `.noodle/tools/`, creates `.venv` and installs `requirements.txt`. It builds the web app with your Node 18+, otherwise with a portable Node in `.noodle/tools/`. It reruns each step only when its inputs change, with the same stamp files as on Windows. It doesn't register the login link handler itself: the server builds and registers `.noodle/Noodle.app` as it starts (`backend/noodle/app_link_mac.py`), unless another app already opens `moodlemobile://` links. `Uninstall Noodle.command` runs `Start Noodle.command --uninstall`, which runs `python -m noodle.app_link_mac --uninstall` and removes the desktop link.
+
+```bash
+./"Start Noodle.command" --profile friend --port 8766 --no-build   # a second Noodle, to try Friends on one laptop
+.venv/bin/python -m uvicorn noodle.app:app --app-dir backend --port 8765
+.venv/bin/python -m pytest backend/tests -q
+```
+
 ## How it's built
 
 | Part | What |
@@ -108,7 +139,7 @@ Everything private stays out of git: `vault/` (your course files and notes), `.n
 
 - Tested on UCL Moodle only.
 - The graph shows one course at a time.
-- Converting slides needs Microsoft Office on Windows. Without it, slides are searchable as text but can't be highlighted.
+- Converting slides needs Microsoft Office on Windows. Without it (and always on a Mac), slides are searchable as text but can't be highlighted, and Word files aren't searchable.
 - Files over 100 MB (like a 494 MB wind-tunnel deck) aren't downloaded, so they aren't converted either.
 - Friends shares notes and highlights through a synced folder, so a share arrives only as fast as the drive syncs, and everyone with access to the folder can read it.
 - The Timeline covers the courses on your Moodle dashboard (plus the ones you sync), not courses you've hidden there.

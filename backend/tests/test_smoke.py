@@ -172,3 +172,34 @@ def test_friends_share_round_trip(tmp_path, monkeypatch):
     assert friends.match_file(conn, {"hash": "zzz", "relpath": "Week 8/L7.pdf"}, "vault/MECH0024_25-26") == 7
     assert friends.match_file(conn, {"hash": "zzz", "relpath": "moved/L7.pdf", "name": "L7.pdf"}, "vault/MECH0024_25-26") == 7
     assert friends.match_file(conn, {"hash": "zzz", "relpath": "x.pdf", "name": "x.pdf"}, "vault/MECH0024_25-26") is None
+
+
+def test_convert_skips_office_off_windows(tmp_path, monkeypatch):
+    import sqlite3
+    from pptx import Presentation
+    from noodle import convert, db
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript(db.SCHEMA)
+    db.ensure_columns(conn)
+    conn.execute("INSERT INTO courses VALUES(1, 'MECH0024_25-26', 'Fluids', 'vault/MECH0024_25-26', 0)")
+    deck = tmp_path / "vault/MECH0024_25-26/Week 8/L7.pptx"
+    deck.parent.mkdir(parents=True)
+    Presentation().save(deck)
+    conn.execute("INSERT INTO files(id, course_id, path, name, ext, kind, status) VALUES "
+                 "(7, 1, 'vault/MECH0024_25-26/Week 8/L7.pptx', 'L7.pptx', 'pptx', 'office', 'ok')")
+    monkeypatch.setattr(db, "connect", lambda: conn)
+    monkeypatch.setattr(convert, "ROOT", tmp_path)
+    monkeypatch.setattr(convert, "CONVERTED_DIR", tmp_path / ".noodle/converted")
+    monkeypatch.setattr(convert.sys, "platform", "darwin")
+
+    def no_subprocess(*a, **k):
+        raise FileNotFoundError("no tasklist on a Mac")
+
+    monkeypatch.setattr(convert.subprocess, "run", no_subprocess)
+    logs = []
+    assert convert.convert_course(1, log=logs.append) == {}
+    assert not logs and not list(tmp_path.rglob("*.failed"))
+    row = conn.execute("SELECT hash, pdf FROM files WHERE id=7").fetchone()
+    assert row["hash"] and row["pdf"] is None  # indexed from its slide text instead
+    assert convert.to_pdf(deck, tmp_path / "out.pdf")  # an error message, not an exception
