@@ -26,26 +26,35 @@ Be clear about this before watching the video:
   - Claude Haiku 5.5 would tag each file and extract its topics once, at sync time: about $0.001 per file, so roughly $0.05–0.10 for one course.
   - Ask would send the ~10 best-matching pages to Claude Opus 5.5 (or Sonnet 5.5) with the Citations feature turned on, each page titled "file — p.N", so every claim links to a real page. About $0.07–0.10 per question on Opus 5.5, $0.03–0.05 on Sonnet 5.5.
 
-## Run it (Windows)
+## Get started (Windows)
 
-You need Python 3.11+ and Node 22+.
+You don't need to install anything first.
+
+1. **Download Noodle.** [Download the ZIP](https://github.com/tarokuroda/noodle/archive/refs/heads/main.zip), open your Downloads folder, right-click `noodle-main.zip` and choose **Extract All…**, then **Extract**.
+2. **Start it.** In the extracted folder, double-click **Start Noodle**. If Windows asks whether to run it, choose **Run** (or **More info → Run anyway**).
+3. **Wait a few minutes, once.** A black window sets Noodle up. The first time, it downloads what it needs (about 300 MB, and Noodle takes about 700 MB of disk). After that, Noodle starts in seconds, and there's a **Noodle** icon on your desktop to start it.
+4. **Log in to Moodle.** Noodle opens in your browser. Enter your Moodle site (UCL is filled in), press **Open Moodle login** and sign in as usual. Moodle then shows a page with a "launch the app" link: right-click it, choose **Copy link address**, paste it into Noodle and press **Log in**. Noodle never sees your password.
+5. **Sync.** Tick your courses and press **Sync**. Your files show up in the Library as they arrive.
+
+Keep the black window open while you use Noodle. Close it to stop Noodle. Double-clicking **Start Noodle** while it's already running just opens it again.
+
+Everything Noodle sets up stays inside its folder (Python and its packages in `.venv\`, helper tools in `.noodle\tools\`). Nothing is installed system-wide. To uninstall, delete the folder and the desktop icon.
+
+**If something goes wrong,** the black window says what failed. Most failures are a dropped internet connection: run **Start Noodle** again and it carries on where it stopped.
+
+### For developers
+
+`Start Noodle.bat` runs `start.ps1`, which you can also run directly. It uses `uv` (your own if it's on PATH, otherwise a copy in `.noodle\tools\`) to create `.venv` and install `requirements.txt`. It builds the web app with your Node 18+ if you have one, otherwise with a portable Node in `.noodle\tools\`. Each step reruns only when its inputs change: `requirements.txt` for the packages, `frontend/src` and the package files for the build. The token from login is saved in `.noodle/config.json`.
+
+To run the backend and the Vite dev server separately:
 
 ```powershell
-pip install -r requirements.txt
-.\start.ps1
-```
-
-`start.ps1` installs the web app's packages the first time, builds it, starts the backend and opens http://localhost:8765. On first launch Noodle shows the login screen: enter your Moodle site, press **Open Moodle login**, sign in, then copy the "launch the app" link from the confirmation page and paste it into Noodle. Your password never reaches Noodle; the token is saved in `.noodle/config.json` on your laptop.
-
-For development, run the backend and the Vite dev server separately:
-
-```powershell
-python -m uvicorn noodle.app:app --app-dir backend --port 8765
+.venv\Scripts\python -m uvicorn noodle.app:app --app-dir backend --port 8765
 npm --prefix frontend run dev        # http://localhost:5173, proxies /api to the backend
-python -m pytest backend/tests -q    # backend smoke tests
+.venv\Scripts\python -m pytest backend/tests -q    # backend smoke tests
 ```
 
-Prefer the command line? `python sync_check.py --course <id>` runs the same sync and index (`--dry-run` lists what would download, `--help` shows the rest).
+Prefer the command line? `.venv\Scripts\python sync_check.py --course <id>` runs the same sync and index (`--dry-run` lists what would download, `--help` shows the rest).
 
 ### Timeline
 
