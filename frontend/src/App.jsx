@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Sidebar from "./components/Sidebar.jsx";
 import { EmptyLibrary, FileViewer } from "./components/Library.jsx";
 import Ask from "./components/Ask.jsx";
+import Graph from "./components/Graph.jsx";
 import { api } from "./api.js";
 
 export default function App() {
@@ -37,9 +38,12 @@ export default function App() {
 
   const course = useMemo(() => courses?.find((c) => c.id === courseId), [courses, courseId]);
   const byId = useMemo(() => Object.fromEntries(files.map((f) => [f.id, f])), [files]);
+  const byIdRef = useRef(byId);
+  byIdRef.current = byId;
 
   const openFile = useCallback(
     (f, page) => {
+      if (typeof f === "number") f = byIdRef.current[f];
       if (!f) return;
       if (f.status !== "ok") {
         window.open(f.moodle_url, "_blank", "noreferrer");
@@ -66,6 +70,7 @@ export default function App() {
         {view === "library" &&
           (openFile_ ? <FileViewer file={openFile_} open={open} setOpen={setOpen} /> : <EmptyLibrary course={course} />)}
         {view === "ask" && <Ask course={course} files={files} thread={thread} setThread={setThread} />}
+        {view === "graph" && <Graph course={course} files={files} onOpenFile={openFile} />}
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>

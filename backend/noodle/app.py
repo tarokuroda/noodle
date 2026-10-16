@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
-from . import demo
+from . import demo, graph, notes
 from .db import connect
 from .paths import ROOT
 from .search import search as run_search
@@ -128,3 +128,60 @@ def ask(body: AskIn):
         if row:
             citations.append({"n": n, "file_id": row["id"], "page": cite["page"], "label": cite["label"]})
     return {**out, "kind": "answer", "answer": item["answer"], "citations": citations}
+
+
+# ---------- graph + notes ----------
+
+@app.get("/api/graph")
+def course_graph(course: int):
+    return graph.build(course)
+
+
+@app.get("/api/notes")
+def notes_list(course: int):
+    return notes.list_notes(course)
+
+
+@app.get("/api/linktargets")
+def link_targets(course: int):
+    return notes.link_targets(course)
+
+
+@app.get("/api/resolve")
+def resolve_link(course: int, target: str):
+    hit = notes.resolve(target, course)
+    if not hit:
+        raise HTTPException(404, f"Nothing called “{target}” in this course.")
+    return {"type": hit[0], "id": hit[1] if hit[0] == "file" else None, "path": hit[1] if hit[0] == "note" else None}
+
+
+class NoteIn(BaseModel):
+    course: int
+    title: str = "Untitled"
+    body: str = ""
+
+
+class NoteSave(BaseModel):
+    path: str
+    content: str
+
+
+@app.post("/api/notes")
+def note_create(body: NoteIn):
+    p = notes.create_note(body.course, body.title, body.body)
+    return {"path": p.relative_to(ROOT).as_posix(), "title": p.stem}
+
+
+@app.get("/api/note")
+def note_read(path: str):
+    p = notes.note_path(path)
+    if not p.exists():
+        raise HTTPException(404, "That note doesn't exist any more.")
+    return {"path": path, "title": p.stem, "content": p.read_text(encoding="utf-8")}
+
+
+@app.put("/api/note")
+def note_save(body: NoteSave):
+    p = notes.note_path(body.path)
+    p.write_text(body.content, encoding="utf-8")
+    return {"ok": True}

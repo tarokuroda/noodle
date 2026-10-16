@@ -244,3 +244,46 @@ h1, h2, h3, .display { font-family: "Fredoka", "Nunito", sans-serif; font-weight
 .side-close { position: absolute; right: 10px; top: 14px; z-index: 5; background: var(--paper); }
 .side-panel .bar { padding-right: 52px; }
 @keyframes side-in { from { opacity: 0; transform: translateX(16px); } }
+
+/* ---------- graph ---------- */
+.graph-wrap { flex: 1; display: flex; min-height: 0; }
+.graph-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.toggles { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.toggles .chip.on { color: var(--indigo); border-color: var(--indigo); background: var(--indigo-soft); }
+.graph-canvas { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+.legend {
+  position: absolute; left: 16px; bottom: 16px; display: flex; flex-wrap: wrap; gap: 4px 12px; max-width: 420px;
+  background: rgba(255, 255, 255, 0.9); border: 1px solid var(--line); border-radius: var(--r-md); padding: 8px 12px;
+  font-size: 12px; font-weight: 700; color: var(--ink-2);
+}
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.legend i.topic { background: #fde7ef; border: 1.5px solid #d6336c; }
+.legend i.note { background: var(--noodle); border: 1.5px solid var(--ink); border-radius: 2px; }
+.topic-card { padding: 28px 28px; overflow-y: auto; }
+.topic-card h2 { font-size: 26px; margin: 10px 0 6px; }
+.topic-card h3 { font-size: 15px; margin: 22px 0 8px; color: var(--ink-2); }
+.topic-card p { color: var(--ink-2); margin: 0 0 16px; max-width: 52ch; }
+.topic-badge { background: #fde7ef; color: #a61e4d; }
+.topic-files { display: flex; flex-direction: column; gap: 2px; }
+
+/* ---------- notes ---------- */
+.note-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--paper); }
+.note-body { flex: 1; overflow-y: auto; }
+.note-read { padding: 18px 24px 40px; line-height: 1.65; }
+.note-read h1 { font-size: 24px; margin: 0 0 12px; }
+.note-read h2 { font-size: 19px; }
+.note-read blockquote {
+  margin: 12px 0; padding: 8px 14px; background: var(--noodle-soft); border-left: 4px solid var(--noodle); border-radius: 0 10px 10px 0;
+}
+.note-read blockquote p { margin: 4px 0; }
+.wikilink {
+  display: inline-flex; align-items: center; gap: 4px; border: 0; background: var(--indigo-soft); color: var(--indigo);
+  border-radius: 99px; padding: 0 9px; font-weight: 800; font-size: 0.92em; vertical-align: 1px;
+}
+.wikilink:hover { background: var(--indigo); color: #fff; }
+.wikilink.page { background: var(--noodle); color: var(--ink); }
+.wikilink.page:hover { background: var(--ink); color: var(--noodle); }
+.note-add { display: block; width: 100%; text-align: left; margin-top: 10px; border: 1px dashed var(--line); background: none; border-radius: var(--r-md); padding: 10px 14px; color: var(--ink-3); font-weight: 700; }
+.note-add:hover { border-color: var(--indigo); color: var(--indigo); }
+.cm-editor .cm-scroller { font-family: Nunito, sans-serif; }
