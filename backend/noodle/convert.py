@@ -4,6 +4,8 @@ PowerPoint and Word do the conversion through COM, one file at a time, each in a
 (an Office dialog that never closes can't hang the sync). The PDFs are cached in .noodle/converted/ by the
 source file's sha1, so a deck is only converted again when it changes. If Office is missing or a file fails,
 slides fall back to their python-pptx text, one page per slide, so search and Ask still find them.
+Off Windows there's no COM, so nothing is converted and slides always use that text (a PDF already in the cache,
+say from a vault copied over from Windows, is still used).
 
     python -m noodle.convert SRC OUT      (from backend/) the child process: convert one file
 """
@@ -41,6 +43,8 @@ def _office_pids():
 
 def to_pdf(src, out, timeout=TIMEOUT):
     """Convert src to out (a .pdf). Returns None, or a short error message."""
+    if sys.platform != "win32":
+        return "converting needs Microsoft Office on Windows"
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_name(out.stem + ".tmp.pdf")
     before = _office_pids()
@@ -80,7 +84,7 @@ def convert_course(course_id=None, log=print, progress=None):
         h = file_hash(src)
         out = CONVERTED_DIR / f"{h}.pdf"
         failed = CONVERTED_DIR / f"{h}.failed"  # delete it to try that file again
-        if not out.exists() and not failed.exists():
+        if not out.exists() and not failed.exists() and sys.platform == "win32":  # Office through COM: Windows only
             if progress:
                 progress("Converting slides", n + 1, len(rows))
             t = time.time()

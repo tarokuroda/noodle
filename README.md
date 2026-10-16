@@ -102,7 +102,7 @@ Keep the Terminal window open while you use Noodle. Close it (or press Ctrl+C in
 
 Everything Noodle sets up stays inside its folder (Python and its packages in `.venv/`, helper tools in `.noodle/tools/`). Outside the folder there's only the desktop link, and macOS's record of the small `.noodle/Noodle.app` that lets Moodle's "launch the app" link reach Noodle. To uninstall, double-click **Uninstall Noodle** (it removes those two), then drag the folder to the Bin.
 
-**Known gaps on a Mac.** Converting slides and Word files to PDF and the **Open in PowerPoint** button use Windows-only code, so expect them to fail until they're adapted.
+**Known gaps on a Mac.** Slides and Word files aren't converted to PDF, because that needs Microsoft Office on Windows. Slides are still searchable and in Ask as their text, one page per slide, but they open as text rather than in the viewer, so you can't highlight them. Word files aren't searchable. The **Open in PowerPoint** button opens the file in whatever app your Mac uses for it (PowerPoint, Keynote, Word or Pages).
 
 ### For developers (Mac)
 
@@ -139,7 +139,7 @@ Everything private stays out of git: `vault/` (your course files and notes), `.n
 
 - Tested on UCL Moodle only.
 - The graph shows one course at a time.
-- Converting slides needs Microsoft Office on Windows. Without it, slides are searchable as text but can't be highlighted.
+- Converting slides needs Microsoft Office on Windows. Without it (and always on a Mac), slides are searchable as text but can't be highlighted, and Word files aren't searchable.
 - Files over 100 MB (like a 494 MB wind-tunnel deck) aren't downloaded, so they aren't converted either.
 - Friends shares notes and highlights through a synced folder, so a share arrives only as fast as the drive syncs, and everyone with access to the folder can read it.
 - The Timeline covers the courses on your Moodle dashboard (plus the ones you sync), not courses you've hidden there.

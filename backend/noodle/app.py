@@ -7,6 +7,8 @@ import html
 import json
 import os
 import re
+import subprocess
+import sys
 import time
 
 from fastapi import FastAPI, HTTPException
@@ -107,12 +109,15 @@ def file_html(fid: int):
 
 @app.post("/api/files/{fid}/open")
 def file_open(fid: int):
-    """Open the original slides or Word doc in its Windows app (converted decks also open in the viewer)."""
+    """Open the original slides or Word doc in its own app (converted decks also open in the viewer)."""
     row = file_row(fid)
     path = ROOT / row["path"]
     if row["status"] != "ok" or not path.exists():
         raise HTTPException(404, "This file isn't on your laptop. Open it in Moodle instead.")
-    os.startfile(path)  # noqa: S606 - local app, the user's own file
+    if sys.platform == "win32":
+        os.startfile(path)  # noqa: S606 - local app, the user's own file
+    else:  # the Mac's `open` picks the default app (PowerPoint, Keynote, Pages...); xdg-open elsewhere
+        subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", str(path)])  # noqa: S603
     return {"ok": True}
 
 
