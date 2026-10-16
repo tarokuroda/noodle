@@ -76,3 +76,44 @@ def test_viewer_and_twins():
     assert viewer_for(row("office")) == "app" and viewer_for(row("media")) == "app"
     assert twin_key("c/Week 4/Lecture4.pptx") == twin_key("c/Week 4/LECTURE4.pdf")
     assert twin_key("c/Week 4/Lecture4.pptx") != twin_key("c/Week 5/Lecture4.pdf")
+
+
+def test_timeline_merges_calendar_events():
+    from noodle.timeline import merge_events
+    now = 1_800_000_000
+    action = [{"id": 1, "name": "Coursework 1 is due", "eventtype": "due", "modulename": "assign", "instance": 77,
+               "timesort": now + 86400, "url": "https://m.example/mod/assign/view.php?id=77", "overdue": False,
+               "course": {"id": 5, "shortname": "ELEC0134_26-27"}},
+              {"id": 3, "name": "Quiz closes", "eventtype": "close", "modulename": "quiz", "instance": 80,
+               "timesort": now - 86400, "url": "https://m.example/mod/quiz/view.php?id=80", "overdue": True,
+               "course": {"id": 5, "shortname": "ELEC0134_26-27"}}]
+    raw = [{"id": 1, "name": "Coursework 1 is due", "eventtype": "due", "modulename": "assign", "instance": 77,
+            "timestart": now + 86400, "courseid": 5},
+           {"id": 2, "name": "Lab report is due", "eventtype": "due", "modulename": "assign", "instance": 78,
+            "timestart": now + 2 * 86400, "courseid": 5},
+           {"id": 4, "name": "Marking", "eventtype": "gradingdue", "modulename": "assign", "instance": 79,
+            "timestart": now, "courseid": 5}]
+    statuses = {"77": {"state": "done", "text": "Submitted"}}
+    items = {i["id"]: i for i in merge_events(action, raw, statuses, {5: "ELEC0134"}, "https://m.example", now)}
+    assert set(items) == {"ev1", "ev2", "ev3"}  # merged by id, teacher-only marking deadline dropped
+    assert items["ev1"]["status"]["text"] == "Submitted" and items["ev1"]["course"] == "ELEC0134"
+    assert items["ev2"]["url"].startswith("https://m.example/calendar/") and items["ev2"]["kind"] == "deadline"
+    assert items["ev3"]["overdue"] and not items["ev1"]["overdue"]
+
+
+def test_timeline_offline_keeps_cache(tmp_path, monkeypatch):
+    import requests
+    from noodle import account, timeline
+    monkeypatch.setattr(timeline, "CACHE_PATH", tmp_path / "timeline.json")
+    timeline.save_json(timeline.CACHE_PATH, {"fetched_at": 1.0, "site": "https://m.example", "courses": {},
+                                             "action": [], "raw": [], "statuses": {}})
+
+    class Down:
+        site, token = "https://m.example", "x" * 32
+
+        def call(self, *a, **k):
+            raise requests.ConnectionError("offline")
+
+    monkeypatch.setattr(account, "status", lambda: {"logged_in": True, "userid": 1})
+    out = timeline.refresh(Down(), force=True)
+    assert out["offline"] and out["fetched_at"] == 1.0

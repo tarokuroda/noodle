@@ -10,7 +10,7 @@ const NAV = [
   { id: "library", label: "Library", icon: BookOpen },
   { id: "ask", label: "Ask", icon: Sparkles },
   { id: "graph", label: "Graph", icon: Network },
-  { id: "timeline", label: "Timeline", icon: CalendarDays, preview: true },
+  { id: "timeline", label: "Timeline", icon: CalendarDays },
   { id: "friends", label: "Friends", icon: Users, preview: true },
 ];
 

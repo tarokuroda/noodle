@@ -308,8 +308,15 @@ def sync_status():
 
 
 @app.get("/api/timeline")
-def course_timeline(course: int):
-    return timeline.build(course)
+def timeline_items(cached: bool = False):
+    """Every enrolled course; cached=1 answers straight from the last fetch, otherwise refreshes if it's stale."""
+    return timeline.build(cached_only=cached)
+
+
+@app.post("/api/timeline/refresh")
+def timeline_refresh():
+    timeline.refresh(force=True)
+    return timeline.build(cached_only=True)
 
 
 # ---------- the built app (npm run build) on the same port; keep this last so /api routes win ----------

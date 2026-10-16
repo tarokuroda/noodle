@@ -133,6 +133,9 @@ def _run(m, chosen):
         new = sum(cs.files["new"] + cs.files["updated"] for cs in results)
         JOB.update(new_files=new)
         index_sync(results, log=lambda *_: None, progress=on_index)
+        JOB.update(phase="Updating the timeline", done=0, total=0)
+        from . import timeline
+        timeline.refresh(m, force=True)  # never raises: an offline calendar mustn't fail the sync
         failed = [cs.course["shortname"] for cs in results if cs.error]
         JOB.update(message=(f"{new} new file{'s' if new != 1 else ''}" if new else "You're up to date: nothing new on Moodle")
                    + (f" (couldn't read {', '.join(failed)})" if failed else ""))

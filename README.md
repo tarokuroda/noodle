@@ -13,7 +13,8 @@ Built for a student hackathon ("something to help students") and tested on UCL M
 - **Linked notes.** Plain Markdown files, Obsidian-compatible. Type `[[` to link a lecture or another note. Open the same folder in Obsidian whenever you like.
 - **Course graph.** Every file, note and topic in the module on one map. Files are linked by the topics they share and by your notes; hover to focus, click a topic to see its summary and the files that cover it.
 - **Ask.** Answers come only from your files, with citation chips like "Lecture 7 — p.36" that open the PDF at that page. If the answer isn't in your files, Noodle says so and shows the closest pages instead of guessing.
-- **Coming next (preview pages):** a Timeline of weeks, deadlines and announcements, and Friends, for sharing notes with classmates.
+- **Timeline.** Every deadline and event from all your Moodle courses in one list, with a **Today** marker, an Upcoming/Past switch and a course filter. Assignments show whether you've submitted. Each item opens its brief in Noodle when it's synced, otherwise its Moodle page. Past weeks, announcements and deadlines of your synced courses fill the Past side.
+- **Coming next (preview page):** Friends, for sharing notes with classmates.
 
 ## How the AI works in this build
 
@@ -46,6 +47,10 @@ python -m pytest backend/tests -q    # backend smoke tests
 
 Prefer the command line? `python sync_check.py --course <id>` runs the same sync and index (`--dry-run` lists what would download, `--help` shows the rest).
 
+### Timeline
+
+Noodle reads your calendar with read-only Moodle functions, one after another: the deadlines that need you (`core_calendar_get_action_events_by_timesort`), every other event in the same window (`core_calendar_get_calendar_events`), and the submission status of assignments due in the next six months. It looks 30 days back and a year ahead, caches the result in `.noodle/timeline.json` for 10 minutes, refreshes after every Sync, and keeps showing the last saved copy when you're offline.
+
 ### Slides and Word files
 
 - **Conversion.** After a sync, each new or changed `.pptx`/`.ppt`/`.docx`/`.doc` is converted to PDF by the Office already on your laptop, through COM (`pywin32`). Each file is converted in its own child process with a 5-minute timeout, so a stuck Office dialog can't hang the sync, and Noodle never closes a PowerPoint window you had open.
@@ -62,6 +67,7 @@ Prefer the command line? `python sync_check.py --course <id>` runs the same sync
 | `backend/noodle/moodle.py`, `sync.py` | Moodle web-service client and course sync. Page HTML comes from the API, assignment dates from the course contents plus submission status, labels become a section overview. Requests are sequential with a pause. |
 | `backend/noodle/convert.py` | Slides and Word files to PDF through Office COM, cached by hash, with a `python-pptx` text fallback. |
 | `backend/noodle/index.py`, `search.py` | PyMuPDF text per page, SQLite FTS5, local embeddings, hybrid ranking (reciprocal rank fusion). |
+| `backend/noodle/timeline.py` | Calendar events, submission status and the synced courses' weeks, cached for offline use. |
 | `backend/noodle/notes.py`, `graph.py` | Markdown notes with `[[wikilinks]]`, highlight quotes, and the course graph. |
 | `backend/noodle/app.py` | FastAPI routes; also serves the built web app. |
 | `frontend/` | React + Vite: `react-pdf` viewer with a custom highlight layer, `react-force-graph-2d`, CodeMirror with `[[` autocomplete. |
@@ -80,4 +86,5 @@ Everything private stays out of git: `vault/` (your course files and notes), `.n
 - The graph shows one course at a time.
 - Converting slides needs Microsoft Office on Windows. Without it, slides are searchable as text but can't be highlighted.
 - Files over 100 MB (like a 494 MB wind-tunnel deck) aren't downloaded, so they aren't converted either.
-- Timeline and Friends are previews: Timeline uses the course's real dates, Friends uses sample data.
+- Friends is a preview with sample data.
+- The Timeline covers the courses on your Moodle dashboard (plus the ones you sync), not courses you've hidden there.

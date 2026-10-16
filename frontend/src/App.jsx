@@ -181,7 +181,7 @@ export default function App() {
           />
         )}
         {view === "ask" && <Ask course={course} files={files} thread={thread} setThread={setThread} />}
-        {view === "timeline" && <Timeline course={course} onOpenFile={openFile} />}
+        {view === "timeline" && <Timeline onOpenFile={openFile} />}
         {view === "friends" && <Friends course={course} />}
         {view === "courses" && <Courses auth={auth} onSynced={synced} onRelogin={() => setShowLogin(true)} />}
         {view === "graph" && <Graph course={course} files={files} onOpenFile={openFile} notesVersion={notesVersion} />}
