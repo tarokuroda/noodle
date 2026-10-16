@@ -86,22 +86,15 @@ export default function App() {
 
   const notesChanged = useCallback(() => setNotesVersion((v) => v + 1), []);
 
-  // remember the open file and view between launches (best effort: storage can be unavailable)
-  const restored = useRef(false);
+  // remember opened files between launches (best effort: storage can be unavailable); the app opens on the
+  // library home, whose "pick up where you left off" row reopens them
   useEffect(() => {
-    if (restored.current || !files.length) return;
-    restored.current = true;
+    if (!open) return;
     try {
-      const last = JSON.parse(localStorage.getItem("noodle:last") || "null");
-      if (last?.course === courseId && files.some((f) => f.id === last.file)) setOpen({ id: last.file, page: last.page || 1, nonce: 1 });
-    } catch {
-      /* ignore */
-    }
-  }, [files, courseId]);
-  useEffect(() => {
-    if (!open || !restored.current) return;
-    try {
-      localStorage.setItem("noodle:last", JSON.stringify({ course: courseId, file: open.id, page: open.page }));
+      const last = { course: courseId, file: open.id, page: open.page };
+      // newest first, one entry per file
+      const recent = JSON.parse(localStorage.getItem("noodle:recent") || "[]").filter((r) => !(r.course === courseId && r.file === open.id));
+      localStorage.setItem("noodle:recent", JSON.stringify([last, ...recent].slice(0, 12)));
     } catch {
       /* ignore */
     }
@@ -137,6 +130,22 @@ export default function App() {
   );
 
   const openFile_ = byId[open?.id];
+
+  // back to the library home: close the file and any note, so the whole course shows
+  const closeFile = useCallback(() => {
+    setOpen(null);
+    setSideNote(null);
+    setMainNote(null);
+  }, []);
+
+  // clicking Library while already in the library goes back to its home
+  const goTo = useCallback(
+    (id) => {
+      if (id === "library" && view === "library") closeFile();
+      setView(id);
+    },
+    [view, closeFile]
+  );
 
   const openNote = useCallback(
     (path) => {
@@ -182,7 +191,7 @@ export default function App() {
         width={sidebarW}
         onResize={setSidebarW}
         view={view}
-        setView={setView}
+        setView={goTo}
         course={course}
         files={files}
         notes={notes}
@@ -209,7 +218,9 @@ export default function App() {
         {view === "library" && (
           <LibraryView
             course={course}
+            files={files}
             file={openFile_}
+            onClose={closeFile}
             open={open}
             setOpen={setOpen}
             sideNote={sideNote}

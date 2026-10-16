@@ -59,7 +59,7 @@ def file_out(row, slides=None):
 def courses():
     rows = connect().execute(
         "SELECT c.id, c.shortname, c.fullname, c.dir, c.synced_at, "
-        "(SELECT COUNT(*) FROM files f WHERE f.course_id=c.id) AS files, "
+        "(SELECT COUNT(*) FROM files f WHERE f.course_id=c.id AND f.twin_id IS NULL) AS files, "  # as the library lists them
         "(SELECT COUNT(*) FROM pages p JOIN files f ON f.id=p.file_id WHERE f.course_id=c.id) AS pages "
         "FROM courses c ORDER BY c.shortname").fetchall()
     picked = set(account.config().get("courses") or [])

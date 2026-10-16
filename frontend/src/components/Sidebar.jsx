@@ -53,6 +53,29 @@ export function FileRow({ file, active, onOpen, indent = true }) {
   );
 }
 
+/** Files (in course order) -> [{ key, name, files }], one per Moodle section, keeping only the ticked tags. */
+export function groupSections(files, tags) {
+  const out = [];
+  const byKey = {};
+  for (const f of files) {
+    if (tags.size && !tags.has(f.tag)) continue;
+    const key = `${f.section_num}`;
+    if (!byKey[key]) {
+      byKey[key] = { key, name: f.section, files: [] };
+      out.push(byKey[key]);
+    }
+    byKey[key].files.push(f);
+  }
+  // announcements live in section 999, the bottom of the course; pin them to the top, newest first
+  const news = out.findIndex((x) => x.key === "999");
+  if (news > 0) {
+    const [a] = out.splice(news, 1);
+    a.files = [...a.files].sort((x, y) => y.name.localeCompare(x.name));
+    out.unshift(a);
+  }
+  return out;
+}
+
 const MIN_W = 240;
 const MAX_W = 560;
 const clampW = (w) => Math.round(Math.min(MAX_W, Math.max(MIN_W, w)));
@@ -142,27 +165,7 @@ export default function Sidebar({ width, onResize, view, setView, course, files,
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const sections = useMemo(() => {
-    const out = [];
-    const byKey = {};
-    for (const f of files) {
-      if (tags.size && !tags.has(f.tag)) continue;
-      const key = `${f.section_num}`;
-      if (!byKey[key]) {
-        byKey[key] = { key, name: f.section, files: [] };
-        out.push(byKey[key]);
-      }
-      byKey[key].files.push(f);
-    }
-    // announcements live in section 999, the bottom of the course; pin them to the top, newest first
-    const news = out.findIndex((x) => x.key === "999");
-    if (news > 0) {
-      const [a] = out.splice(news, 1);
-      a.files = [...a.files].sort((x, y) => y.name.localeCompare(x.name));
-      out.unshift(a);
-    }
-    return out;
-  }, [files, tags]);
+  const sections = useMemo(() => groupSections(files, tags), [files, tags]);
 
   // filtering by tag opens every section that still has files
   useEffect(() => {
