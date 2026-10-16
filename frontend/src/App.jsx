@@ -58,6 +58,27 @@ export default function App() {
 
   const notesChanged = useCallback(() => setNotesVersion((v) => v + 1), []);
 
+  // remember the open file and view between launches (best effort: storage can be unavailable)
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || !files.length) return;
+    restored.current = true;
+    try {
+      const last = JSON.parse(localStorage.getItem("noodle:last") || "null");
+      if (last?.course === courseId && files.some((f) => f.id === last.file)) setOpen({ id: last.file, page: last.page || 1, nonce: 1 });
+    } catch {
+      /* ignore */
+    }
+  }, [files, courseId]);
+  useEffect(() => {
+    if (!open || !restored.current) return;
+    try {
+      localStorage.setItem("noodle:last", JSON.stringify({ course: courseId, file: open.id, page: open.page }));
+    } catch {
+      /* ignore */
+    }
+  }, [open, courseId]);
+
   const course = useMemo(() => courses?.find((c) => c.id === courseId), [courses, courseId]);
   const byId = useMemo(() => Object.fromEntries(files.map((f) => [f.id, f])), [files]);
   const byIdRef = useRef(byId);

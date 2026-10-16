@@ -286,3 +286,10 @@ def sync_status():
 @app.get("/api/timeline")
 def course_timeline(course: int):
     return timeline.build(course)
+
+
+# ---------- the built app (npm run build) on the same port; keep this last so /api routes win ----------
+_DIST = ROOT / "frontend" / "dist"
+if _DIST.exists():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=_DIST, html=True), name="app")

@@ -81,7 +81,7 @@ export default function Graph({ course, files, onOpenFile, onOpenNote, notesVers
     if (import.meta.env.DEV) window.__noodleGraph = { fg: f, graph };
     f.d3Force("charge").strength((n) => (n.type === "topic" ? -260 : -90)).distanceMax(420);
     f.d3Force("link").distance((l) => (l.kind === "topic" ? 60 : l.kind === "link" ? 50 : 26)).strength((l) => (l.kind === "structure" ? 0.5 : 0.18));
-    f.d3Force("collide", forceCollide((n) => (n.type === "topic" ? 26 : n.type === "note" ? 16 : 9)));
+    f.d3Force("collide", forceCollide((n) => (n.type === "topic" ? 34 : n.type === "note" ? 18 : 10)));
     f.d3ReheatSimulation();
   }, [graph]);
 
@@ -125,9 +125,10 @@ export default function Graph({ course, files, onOpenFile, onOpenNote, notesVers
       }
     }
     const isActive = active && node.id === active.id;
-    const showLabel = node.type !== "file" || isActive || (active && on) || scale > 2.4;
+    const showLabel =
+      isActive || (active && on) || node.type === "note" || (node.type === "topic" && (node.count >= 4 || scale > 1.6)) || scale > 2.6;
     if (showLabel) {
-      const size = node.type === "topic" ? 12 : node.type === "note" ? 12 : 11;
+      const size = node.type === "topic" ? 11.5 : node.type === "note" ? 12 : 11;
       ctx.font = fontPx(size);
       const label = node.label.length > 42 ? node.label.slice(0, 40) + "…" : node.label;
       const w = ctx.measureText(label).width;
@@ -136,8 +137,12 @@ export default function Graph({ course, files, onOpenFile, onOpenNote, notesVers
         ctx.fillStyle = "rgba(255,255,255,0.92)";
         ctx.fillRect(node.x - w / 2 - 3 / scale, y - (size - 1) / scale, w + 6 / scale, (size + 4) / scale);
       }
-      ctx.fillStyle = node.type === "topic" ? "#a61e4d" : "#1e2235";
       ctx.textAlign = "center";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 3.5 / scale;
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.strokeText(label, node.x, y);
+      ctx.fillStyle = node.type === "topic" ? "#a61e4d" : "#1e2235";
       ctx.fillText(label, node.x, y);
     }
     ctx.globalAlpha = 1;
