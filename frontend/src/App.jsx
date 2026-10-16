@@ -28,6 +28,19 @@ export default function App() {
   const [sideNote, setSideNote] = useState(null);
   const [mainNote, setMainNote] = useState(null);
   const [navOpen, setNavOpen] = useState(false); // the sidebar as a drawer on narrow screens
+  // a dragged sidebar width, remembered between visits; null = the stylesheet's default
+  const [sidebarW, setSidebarW] = useState(() => {
+    try {
+      return +localStorage.getItem("noodle:sidebar-w") || null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    try {
+      sidebarW ? localStorage.setItem("noodle:sidebar-w", sidebarW) : localStorage.removeItem("noodle:sidebar-w");
+    } catch {}
+  }, [sidebarW]);
 
   const toastTimer = useRef(null);
   const showToast = useCallback((msg) => {
@@ -164,8 +177,10 @@ export default function App() {
   }
 
   return (
-    <div className={`app ${navOpen ? "nav-open" : ""}`}>
+    <div className={`app ${navOpen ? "nav-open" : ""}`} style={sidebarW ? { "--sidebar-w": `${sidebarW}px` } : undefined}>
       <Sidebar
+        width={sidebarW}
+        onResize={setSidebarW}
         view={view}
         setView={setView}
         course={course}

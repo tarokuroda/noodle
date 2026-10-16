@@ -79,7 +79,18 @@ h1, h2, h3, .display { font-family: "Fredoka", "Nunito", sans-serif; font-weight
 .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--paper); }
 .mobile-bar, .scrim { display: none; }
 
-.sidebar { background: var(--mist); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.sidebar { background: var(--mist); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; position: relative; }
+.resize-handle {
+  position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; z-index: 5; cursor: col-resize; touch-action: none;
+}
+.resize-handle::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent;
+  transition: background-color var(--fast);
+}
+.resize-handle:hover::after, .resize-handle:focus-visible::after, body.resizing .resize-handle::after { background: var(--indigo); }
+.resize-handle:focus-visible { outline: none; }
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing iframe, body.resizing canvas { pointer-events: none; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 20px 20px 10px; }
 .brand-name { font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 26px; line-height: 1; }
 .brand svg { flex: none; }
@@ -144,6 +155,13 @@ h1, h2, h3, .display { font-family: "Fredoka", "Nunito", sans-serif; font-weight
   border-color: color-mix(in srgb, var(--c, var(--indigo)) 55%, var(--paper));
 }
 .chip.on .muted { color: var(--ink-2); }
+.tree-tools { display: flex; justify-content: flex-end; padding: 0 16px 2px; }
+.tree-toggle {
+  display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; border-radius: 99px;
+  padding: 3px 8px; font-size: 12px; font-weight: 800; color: var(--ink-3);
+  transition: background-color var(--fast), color var(--fast);
+}
+.tree-toggle:hover { background: var(--mist-2); color: var(--ink); }
 .chips-clear { border: 0; background: none; padding: 3px 6px; font-size: 13px; font-weight: 800; color: var(--indigo); border-radius: 99px; }
 .chips-clear:hover { background: var(--indigo-soft); }
 
@@ -162,6 +180,7 @@ h1, h2, h3, .display { font-family: "Fredoka", "Nunito", sans-serif; font-weight
 }
 .section-btn:hover { background: var(--mist-2); color: var(--ink); }
 .section-btn > svg { flex: none; color: var(--ink-4); }
+.section-btn > svg.news-icon { color: var(--chili-ink); }
 .section-btn span.name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .section-btn .count { color: var(--ink-3); font-weight: 700; font-variant-numeric: tabular-nums; }
 
@@ -641,6 +660,7 @@ button.retrieved-chip:hover { border-color: var(--indigo); color: var(--indigo);
     transform: translateX(-104%); transition: transform 0.3s var(--ease); visibility: hidden;
   }
   .app.nav-open .sidebar { transform: none; visibility: visible; }
+  .resize-handle { display: none; }
   .scrim {
     display: block; position: fixed; inset: 0; z-index: 55; background: rgba(30, 34, 53, 0.32);
     opacity: 0; pointer-events: none; transition: opacity 0.25s var(--ease);

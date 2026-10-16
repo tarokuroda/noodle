@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  BookOpen, CalendarDays, ChevronDown, ChevronRight, ExternalLink, FileText, Film, Globe, LoaderCircle, Network,
+  BookOpen, CalendarDays, ChevronDown, ChevronsDownUp, ChevronsUpDown, ChevronRight, ExternalLink, FileText, Film, Globe, LoaderCircle, Megaphone, Network,
   Presentation, RefreshCw, Search, Sparkles, Users, X, File as FileIcon, NotebookPen,
 } from "lucide-react";
 import Logo from "./Logo.jsx";
@@ -52,7 +52,55 @@ export function FileRow({ file, active, onOpen, indent = true }) {
   );
 }
 
-export default function Sidebar({ view, setView, course, files, notes = [], openId, openNote, onOpen, onOpenNote, onNewNote, courses = [], setCourseId, onSync, profile }) {
+const MIN_W = 240;
+const MAX_W = 560;
+const clampW = (w) => Math.round(Math.min(MAX_W, Math.max(MIN_W, w)));
+
+// drag the sidebar's right edge to resize it; arrow keys nudge it, double-click goes back to the default
+function ResizeHandle({ width, onResize }) {
+  const start = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const aside = e.currentTarget.parentElement;
+    const left = aside.getBoundingClientRect().left;
+    const move = (ev) => onResize(clampW(ev.clientX - left));
+    const up = () => {
+      document.body.classList.remove("resizing");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    document.body.classList.add("resizing");
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  const onKey = (e) => {
+    const step = e.shiftKey ? 40 : 16;
+    const cur = width || e.currentTarget.parentElement.offsetWidth;
+    if (e.key === "ArrowLeft") onResize(clampW(cur - step));
+    else if (e.key === "ArrowRight") onResize(clampW(cur + step));
+    else if (e.key === "Home") onResize(null);
+    else return;
+    e.preventDefault();
+  };
+  return (
+    <div
+      className="resize-handle"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      aria-valuemin={MIN_W}
+      aria-valuemax={MAX_W}
+      aria-valuenow={width || undefined}
+      tabIndex={0}
+      title="Drag to resize · double-click to reset"
+      onPointerDown={start}
+      onDoubleClick={() => onResize(null)}
+      onKeyDown={onKey}
+    />
+  );
+}
+
+export default function Sidebar({ width, onResize, view, setView, course, files, notes = [], openId, openNote, onOpen, onOpenNote, onNewNote, courses = [], setCourseId, onSync, profile }) {
   const [tags, setTags] = useState(new Set());
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
@@ -105,8 +153,20 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
       }
       byKey[key].files.push(f);
     }
+    // announcements live in section 999, the bottom of the course; pin them to the top, newest first
+    const news = out.findIndex((x) => x.key === "999");
+    if (news > 0) {
+      const [a] = out.splice(news, 1);
+      a.files = [...a.files].sort((x, y) => y.name.localeCompare(x.name));
+      out.unshift(a);
+    }
     return out;
   }, [files, tags]);
+
+  // filtering by tag opens every section that still has files
+  useEffect(() => {
+    if (tags.size) setExpanded((s) => new Set([...s, ...sections.map((x) => x.key)]));
+  }, [tags]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // keep the open file's section expanded
   useEffect(() => {
@@ -120,6 +180,10 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
       n.has(key) ? n.delete(key) : n.add(key);
       return n;
     });
+
+  const treeKeys = [...(notes.length > 0 || onNewNote ? ["notes"] : []), ...sections.map((s) => s.key)];
+  const anyOpen = treeKeys.some((k) => expanded.has(k));
+  const toggleAll = () => setExpanded(anyOpen ? new Set() : new Set(treeKeys));
 
   const toggleTag = (t) =>
     setTags((s) => {
@@ -136,6 +200,7 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
 
   return (
     <aside className="sidebar">
+      {onResize && <ResizeHandle width={width} onResize={onResize} />}
       <div className="brand">
         <Logo />
         <span className="brand-name">Noodle</span>
@@ -189,6 +254,7 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
           </div>
           {!results && (
             <div className="chips">
+
               {TAGS.filter((t) => counts[t]).map((t) => (
                 <button
                   key={t}
@@ -207,6 +273,14 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
                   Show all
                 </button>
               )}
+            </div>
+          )}
+          {!results && treeKeys.length > 1 && (
+            <div className="tree-tools">
+              <button className="tree-toggle" onClick={toggleAll} aria-expanded={anyOpen}>
+                {anyOpen ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
+                {anyOpen ? "Collapse all" : "Expand all"}
+              </button>
             </div>
           )}
           <div className="tree">
@@ -238,7 +312,7 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
               <>
                 {(notes.length > 0 || onNewNote) && (
                   <div>
-                    <button className="section-btn" onClick={() => toggle("notes")}>
+                    <button className="section-btn" onClick={() => toggle("notes")} aria-expanded={expanded.has("notes")}>
                       {expanded.has("notes") ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       <span className="name">My notes</span>
                       <span className="count">{notes.length}</span>
@@ -275,11 +349,12 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
                   </div>
                 )}
                 {sections.map((s) => {
-                  const open = tags.size > 0 || expanded.has(s.key);
+                  const open = expanded.has(s.key);
                   return (
                     <div key={s.key}>
-                      <button className="section-btn" onClick={() => toggle(s.key)} title={s.name}>
+                      <button className="section-btn" onClick={() => toggle(s.key)} title={s.name} aria-expanded={open}>
                         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        {s.key === "999" && <Megaphone size={14} className="news-icon" />}
                         <span className="name">{s.name}</span>
                         <span className="count">{s.files.length}</span>
                       </button>
