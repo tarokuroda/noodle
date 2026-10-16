@@ -50,3 +50,29 @@ def test_wikilinks_parse_and_resolve():
     targets = notes.link_targets(course["id"])
     pdf = next(t for t in targets if t["kind"] == "pdf")
     assert notes.resolve(pdf["link"], course["id"], targets) == ("file", pdf["id"])
+
+
+def test_slide_text_fallback(tmp_path):
+    from pptx import Presentation
+    from noodle.convert import slide_texts
+    deck = Presentation()
+    for title in ("Isentropic flow", "Normal shocks"):
+        slide = deck.slides.add_slide(deck.slide_layouts[1])
+        slide.shapes.title.text = title
+        slide.placeholders[1].text = f"About {title.lower()}"
+    path = tmp_path / "deck.pptx"
+    deck.save(path)
+    pages = slide_texts(path)
+    assert [n for n, _ in pages] == [1, 2]
+    assert "Isentropic flow" in pages[0][1] and "normal shocks" in pages[1][1]
+
+
+def test_viewer_and_twins():
+    from noodle.index import twin_key, viewer_for
+    row = lambda kind, pdf=None, pages=None: {"kind": kind, "pdf": pdf, "pages": pages}  # noqa: E731
+    assert viewer_for(row("pdf")) == "pdf" and viewer_for(row("page")) == "page"
+    assert viewer_for(row("office", pdf=".noodle/converted/x.pdf")) == "pdf"
+    assert viewer_for(row("office", pages=12)) == "page"
+    assert viewer_for(row("office")) == "app" and viewer_for(row("media")) == "app"
+    assert twin_key("c/Week 4/Lecture4.pptx") == twin_key("c/Week 4/LECTURE4.pdf")
+    assert twin_key("c/Week 4/Lecture4.pptx") != twin_key("c/Week 5/Lecture4.pdf")

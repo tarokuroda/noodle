@@ -3,6 +3,7 @@
     python -m uvicorn noodle.app:app --app-dir backend --port 8765
 """
 
+import html
 import json
 import os
 import re
@@ -13,7 +14,9 @@ from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
 from . import account, demo, graph, notes, timeline
+from .convert import app_name
 from .db import connect
+from .index import viewer_for
 from .paths import ROOT
 from .search import search as run_search
 
@@ -33,11 +36,22 @@ def file_row(fid):
     return row
 
 
-def file_out(row):
+def slides_of(where, args):
+    """PDF id -> the same-name deck next to it (its twin), for "Open in PowerPoint"."""
+    return {r["twin_id"]: r for r in connect().execute(
+        f"SELECT id, ext, twin_id FROM files WHERE twin_id IS NOT NULL AND {where}", args)}
+
+
+def file_out(row, slides=None):
     d = dict(row)
-    d.pop("indexed_mtime", None)
-    d.pop("url", None)  # Moodle file URLs are only used by the sync
+    for k in ("indexed_mtime", "url", "pdf", "twin_id"):  # Moodle file URLs are only used by the sync
+        d.pop(k, None)
     d["tag"] = demo.tag_for(row["path"], row["name"], row["kind"])
+    d["viewer"] = viewer_for(row)
+    d["app_name"] = app_name(row["ext"]) if row["kind"] == "office" else None
+    twin = (slides if slides is not None else slides_of("twin_id=?", (row["id"],))).get(row["id"])
+    if twin:
+        d["slides_id"], d["app_name"] = twin["id"], app_name(twin["ext"])
     return d
 
 
@@ -54,8 +68,10 @@ def courses():
 
 @app.get("/api/files")
 def files(course: int):
-    rows = connect().execute("SELECT * FROM files WHERE course_id=? ORDER BY section_num, ord", (course,)).fetchall()
-    return [file_out(r) for r in rows]
+    rows = connect().execute("SELECT * FROM files WHERE course_id=? AND twin_id IS NULL ORDER BY section_num, ord",
+                             (course,)).fetchall()
+    slides = slides_of("course_id=?", (course,))
+    return [file_out(r, slides) for r in rows]
 
 
 @app.get("/api/files/{fid}")
@@ -69,12 +85,20 @@ def file_raw(fid: int):
     path = ROOT / row["path"]
     if row["status"] != "ok" or not path.exists():
         raise HTTPException(404, "This file isn't on your laptop. Open it in Moodle instead.")
+    if row["kind"] == "office" and row["pdf"] and (ROOT / row["pdf"]).exists():
+        return FileResponse(ROOT / row["pdf"], media_type="application/pdf")  # a deck, converted to PDF
     return FileResponse(path)
 
 
 @app.get("/api/files/{fid}/html", response_class=HTMLResponse)
 def file_html(fid: int):
     row = file_row(fid)
+    if row["kind"] == "office":  # a deck PowerPoint couldn't convert: its slide text
+        pages = connect().execute("SELECT page, text FROM pages WHERE file_id=? ORDER BY page", (fid,)).fetchall()
+        body = "".join(f"<h2>Slide {p['page']}</h2><p>{html.escape(p['text']).replace(chr(10), '<br>')}</p>"
+                       for p in pages)
+        return HTMLResponse(f"{PAGE_STYLE}<h1>{html.escape(row['name'])}</h1>{body}",
+                            headers={"Content-Security-Policy": "script-src 'none'"})
     raw = (ROOT / row["path"]).read_text(encoding="utf-8", errors="replace")
     raw = re.sub(r"(?is)<script[^>]*>.*?</script>", "", raw)
     raw = re.sub(r"(?is)\son\w+\s*=\s*(\"[^\"]*\"|'[^']*')", "", raw)
@@ -83,7 +107,7 @@ def file_html(fid: int):
 
 @app.post("/api/files/{fid}/open")
 def file_open(fid: int):
-    """Slides and Word docs open in their default Windows app."""
+    """Open the original slides or Word doc in its Windows app (converted decks also open in the viewer)."""
     row = file_row(fid)
     path = ROOT / row["path"]
     if row["status"] != "ok" or not path.exists():
@@ -105,7 +129,7 @@ class AskIn(BaseModel):
 
 
 def _hit(h):
-    return {k: h[k] for k in ("file_id", "name", "kind", "page", "snippet")}
+    return {k: h[k] for k in ("file_id", "name", "kind", "viewer", "page", "snippet")}
 
 
 @app.get("/api/ask/suggestions")

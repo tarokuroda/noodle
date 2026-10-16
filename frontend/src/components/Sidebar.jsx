@@ -171,7 +171,7 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
                     <button key={r.file_id} className="result" onClick={() => onOpen(files.find((f) => f.id === r.file_id), r.page)}>
                       <div className="rname"><Icon size={14} /> {r.name}</div>
                       <div className="rmeta">
-                        {r.kind === "pdf" ? `p.${r.page} · ` : ""}
+                        {r.viewer === "pdf" ? `p.${r.page} · ` : ""}
                         {r.matched.includes("meaning") && !r.matched.includes("keyword") ? "matched by meaning" : r.matched.includes("meaning") ? "words + meaning" : "matching words"}
                       </div>
                       <div className="rsnip"><Snippet text={r.snippet} /></div>

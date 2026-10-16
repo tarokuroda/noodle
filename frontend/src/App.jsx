@@ -92,7 +92,7 @@ export default function App() {
         window.open(f.moodle_url, "_blank", "noreferrer");
         return;
       }
-      if (f.kind === "pdf" || f.kind === "page") {
+      if (f.viewer === "pdf" || f.viewer === "page") {
         setOpen({ id: f.id, page: page || 1, nonce: Date.now() });
         setMainNote((m) => {
           if (m) setSideNote(m); // a note opened on its own stays beside the file it links to

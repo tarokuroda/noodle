@@ -70,7 +70,7 @@ def link_targets(course_id):
     c = course_row(course_id)
     prefix = c["dir"] + "/"
     rows = connect().execute("SELECT id, path, name, kind FROM files WHERE course_id=? AND status='ok' "
-                             "ORDER BY section_num, ord", (course_id,)).fetchall()
+                             "AND twin_id IS NULL ORDER BY section_num, ord", (course_id,)).fetchall()
     base_count = {}
     for r in rows:
         base = Path(r["path"]).name

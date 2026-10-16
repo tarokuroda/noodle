@@ -8,7 +8,8 @@ Built for a student hackathon ("something to help students") and tested on UCL M
 
 - **One-click sync.** Log in through Moodle's own page, tick your courses, press **Sync**. Files, Moodle pages, section text, assignment briefs, announcements and deadlines land in a tidy folder on your laptop. A second sync only fetches what changed. Files over 100 MB, and the few that Moodle's bot protection blocks, stay listed with an **Open in Moodle** button.
 - **Library.** Course → weeks → files, colour-coded by type (lecture, tutorial, past paper, assignment, reading). Filter with chips, or search by words **and by meaning**: "why do rockets need a wider exit" finds the Lecture 7 slide on why exit nozzles have that shape.
-- **Read and highlight.** PDFs open in the app. Select text and press **Highlight**: the quote goes into that file's note with a `p.N` link back to the page. Moodle pages open as clean, readable text; slides and Word files open in their Windows app.
+- **Read and highlight.** PDFs, slide decks and Word files open in the app. Select text and press **Highlight**: the quote goes into that file's note with a `p.N` link back to the page. Moodle pages open as clean, readable text. Every deck still has an **Open in PowerPoint** button.
+- **Slides become PDFs.** At sync time Noodle asks PowerPoint (or Word) on your laptop to save each `.pptx` and `.docx` as a PDF, so slides are searchable, highlightable and citable like any lecture PDF (see below).
 - **Linked notes.** Plain Markdown files, Obsidian-compatible. Type `[[` to link a lecture or another note. Open the same folder in Obsidian whenever you like.
 - **Course graph.** Every file, note and topic in the module on one map. Files are linked by the topics they share and by your notes; hover to focus, click a topic to see its summary and the files that cover it.
 - **Ask.** Answers come only from your files, with citation chips like "Lecture 7 — p.36" that open the PDF at that page. If the answer isn't in your files, Noodle says so and shows the closest pages instead of guessing.
@@ -45,6 +46,13 @@ python -m pytest backend/tests -q    # backend smoke tests
 
 Prefer the command line? `python sync_check.py --course <id>` runs the same sync and index (`--dry-run` lists what would download, `--help` shows the rest).
 
+### Slides and Word files
+
+- **Conversion.** After a sync, each new or changed `.pptx`/`.ppt`/`.docx`/`.doc` is converted to PDF by the Office already on your laptop, through COM (`pywin32`). Each file is converted in its own child process with a 5-minute timeout, so a stuck Office dialog can't hang the sync, and Noodle never closes a PowerPoint window you had open.
+- **Cache.** The PDFs are cached in `.noodle/converted/<sha1 of the file>.pdf`, so a deck is converted once and again only when it changes. A file that fails gets a `.failed` marker next to it; delete the marker to try again.
+- **Fallback.** Without Office, or if a deck won't convert, Noodle reads the slide text with `python-pptx`, one page per slide. Search and Ask still find it, and it opens as readable text.
+- **Twins.** When a deck sits next to a same-name PDF (the lecturer uploaded both), the library shows the PDF once and gives it an **Open in PowerPoint** button for the deck. The deck isn't converted or indexed twice.
+
 **Antivirus HTTPS scanning** (e.g. Avast) re-signs TLS traffic. Noodle's HTTP clients trust the Windows certificate store, so this works out of the box. If `npm install` fails with certificate errors, run it with `NODE_OPTIONS=--use-system-ca`.
 
 ## How it's built
@@ -52,6 +60,7 @@ Prefer the command line? `python sync_check.py --course <id>` runs the same sync
 | Part | What |
 |---|---|
 | `backend/noodle/moodle.py`, `sync.py` | Moodle web-service client and course sync. Page HTML comes from the API, assignment dates from the course contents plus submission status, labels become a section overview. Requests are sequential with a pause. |
+| `backend/noodle/convert.py` | Slides and Word files to PDF through Office COM, cached by hash, with a `python-pptx` text fallback. |
 | `backend/noodle/index.py`, `search.py` | PyMuPDF text per page, SQLite FTS5, local embeddings, hybrid ranking (reciprocal rank fusion). |
 | `backend/noodle/notes.py`, `graph.py` | Markdown notes with `[[wikilinks]]`, highlight quotes, and the course graph. |
 | `backend/noodle/app.py` | FastAPI routes; also serves the built web app. |
@@ -69,5 +78,6 @@ Everything private stays out of git: `vault/` (your course files and notes), `.n
 
 - Tested on UCL Moodle only.
 - The graph shows one course at a time.
-- Highlights work on PDFs only; slides and Word files open in their own apps.
+- Converting slides needs Microsoft Office on Windows. Without it, slides are searchable as text but can't be highlighted.
+- Files over 100 MB (like a 494 MB wind-tunnel deck) aren't downloaded, so they aren't converted either.
 - Timeline and Friends are previews: Timeline uses the course's real dates, Friends uses sample data.

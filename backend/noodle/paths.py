@@ -9,5 +9,6 @@ MANIFEST_PATH = STATE_DIR / "manifest.json"
 DB_PATH = STATE_DIR / "noodle.db"
 DEMO_DIR = STATE_DIR / "demo"
 MODELS_DIR = STATE_DIR / "models"
+CONVERTED_DIR = STATE_DIR / "converted"  # slides and Word docs as PDF, named by the source file's sha1
 VAULT = ROOT / "vault"
 NOTES_DIRNAME = "Notes"

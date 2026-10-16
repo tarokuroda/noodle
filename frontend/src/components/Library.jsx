@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, ExternalLink, NotebookPen, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, NotebookPen, Presentation, X } from "lucide-react";
 import NotePanel from "./NotePanel.jsx";
 import PdfViewer from "./PdfViewer.jsx";
 import Logo from "./Logo.jsx";
@@ -16,7 +16,7 @@ export function FileViewer({ file, open, setOpen, highlights, onHighlight, compa
           <h1 title={file.name}>{file.name}</h1>
           {!compact && <p>{file.section} · {file.tag}</p>}
         </div>
-        {file.kind === "pdf" && pos.num > 0 && (
+        {file.viewer === "pdf" && pos.num > 0 && (
           <div className="pager">
             <button className="icon-btn" onClick={() => jump(Math.max(1, pos.current - 1))} aria-label="Previous page">
               <ChevronLeft size={18} />
@@ -34,6 +34,11 @@ export function FileViewer({ file, open, setOpen, highlights, onHighlight, compa
           </div>
         )}
         {actions}
+        {!compact && file.app_name && (
+          <button className="btn" onClick={() => api(`/files/${file.slides_id || file.id}/open`, { method: "POST" })} title={`Open the original in ${file.app_name}`}>
+            <Presentation size={14} /> {file.app_name}
+          </button>
+        )}
         {!compact && file.moodle_url && (
           <a className="btn" href={file.moodle_url} target="_blank" rel="noreferrer">
             <ExternalLink size={14} /> Moodle
@@ -41,7 +46,7 @@ export function FileViewer({ file, open, setOpen, highlights, onHighlight, compa
         )}
       </div>
       <div className="viewer-wrap">
-        {file.kind === "pdf" ? (
+        {file.viewer === "pdf" ? (
           <PdfViewer
             file={file}
             page={open?.id === file.id ? open.page : 1}
@@ -86,7 +91,7 @@ export function LibraryView({ course, file, open, setOpen, sideNote, setSideNote
 
   useEffect(() => {
     setHighlights([]);
-    if (file?.kind === "pdf") api(`/highlights?file=${file.id}`).then(setHighlights);
+    if (file?.viewer === "pdf") api(`/highlights?file=${file.id}`).then(setHighlights);
   }, [file?.id]);
 
   const onHighlight = async (sel) => {
@@ -115,7 +120,7 @@ export function LibraryView({ course, file, open, setOpen, sideNote, setSideNote
         open={open}
         setOpen={setOpen}
         highlights={highlights}
-        onHighlight={file.kind === "pdf" ? onHighlight : undefined}
+        onHighlight={file.viewer === "pdf" ? onHighlight : undefined}
         actions={
           <button className={`btn ${sideNote ? "yellow" : ""}`} onClick={toggleNote}>
             <NotebookPen size={14} /> Notes

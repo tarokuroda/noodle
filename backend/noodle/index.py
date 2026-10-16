@@ -87,7 +87,37 @@ def upsert_records(course_id, records):
         for fid in gone:
             drop_text(conn, fid)
             conn.execute("DELETE FROM files WHERE id=?", (fid,))
+    link_twins(conn, course_id)
     conn.commit()
+
+
+def twin_key(path):
+    """Folder + lower-case stem: a deck and its PDF export share it."""
+    p = Path(path)
+    return (p.parent.as_posix(), p.stem.lower())
+
+
+def link_twins(conn, course_id):
+    """A deck that sits next to a same-name PDF is that PDF's twin: the library shows the PDF once and
+    offers "Open in PowerPoint" for the deck. Twins aren't converted, indexed or put in the graph."""
+    pdfs = {twin_key(r["path"]): r["id"] for r in conn.execute(
+        "SELECT id, path FROM files WHERE course_id=? AND kind='pdf' AND status='ok'", (course_id,))}
+    for r in conn.execute("SELECT id, path, twin_id FROM files WHERE course_id=? AND kind='office'", (course_id,)).fetchall():
+        twin = pdfs.get(twin_key(r["path"]))
+        if twin != r["twin_id"]:
+            conn.execute("UPDATE files SET twin_id=?, pdf=NULL, indexed_mtime=NULL WHERE id=?", (twin, r["id"]))
+            if twin:
+                drop_text(conn, r["id"])  # its PDF twin is the searchable copy
+    conn.commit()
+
+
+def viewer_for(row):
+    """How the app opens a file: "pdf" (viewer with highlights), "page" (readable text) or "app" (its Windows app)."""
+    if row["kind"] == "pdf" or (row["kind"] == "office" and row["pdf"]):
+        return "pdf"
+    if row["kind"] == "page" or (row["kind"] == "office" and row["pages"]):
+        return "page"
+    return "app"
 
 
 def drop_text(conn, fid):
@@ -104,13 +134,20 @@ def html_to_text(raw):
     return re.sub(r"\n\s*\n+", "\n\n", text).strip()
 
 
-def extract_pages(path):
-    """[(page_number, text)] for a PDF or a Moodle page."""
+def extract_pages(path, converted=None):
+    """[(page_number, text)] for a PDF, a Moodle page, or a deck/doc (its converted PDF, else the slide text)."""
+    if converted:
+        path = converted
     if path.suffix.lower() == ".pdf":
         import fitz
         with fitz.open(path) as doc:
             return [(i + 1, page.get_text("text")) for i, page in enumerate(doc)]
-    return [(1, html_to_text(path.read_text(encoding="utf-8", errors="replace")))]
+    if path.suffix.lower() == ".pptx":
+        from .convert import slide_texts
+        return slide_texts(path)
+    if path.suffix.lower() in (".html", ".htm"):
+        return [(1, html_to_text(path.read_text(encoding="utf-8", errors="replace")))]
+    return []
 
 
 def file_hash(path):
@@ -122,10 +159,17 @@ def file_hash(path):
 
 
 def index_text(course_id=None, log=print, progress=None):
-    """Extract text for new/changed PDFs and pages, then embed pages that have no vector yet."""
+    """Convert new slides to PDF, extract text for new/changed files, then embed pages that have no vector yet."""
+    from .convert import CONVERTIBLE, convert_course
     conn = connect()
-    where = "status='ok' AND kind IN ('pdf','page')" + (" AND course_id=?" if course_id else "")
-    rows = conn.execute(f"SELECT id, path, name, indexed_mtime FROM files WHERE {where}",
+    for (cid,) in conn.execute("SELECT id FROM courses" + (" WHERE id=?" if course_id else ""),
+                               (course_id,) if course_id else ()).fetchall():
+        link_twins(conn, cid)
+    converted = convert_course(course_id, log, progress)
+    exts = ",".join(f"'{e}'" for e in CONVERTIBLE)
+    where = (f"status='ok' AND (kind IN ('pdf','page') OR (kind='office' AND twin_id IS NULL AND ext IN ({exts})))"
+             + (" AND course_id=?" if course_id else ""))
+    rows = conn.execute(f"SELECT id, path, name, kind, hash, pdf, indexed_mtime FROM files WHERE {where}",
                         (course_id,) if course_id else ()).fetchall()
     changed = 0
     for n, row in enumerate(rows):
@@ -138,7 +182,7 @@ def index_text(course_id=None, log=print, progress=None):
         if row["indexed_mtime"] == mtime:
             continue
         try:
-            pages = extract_pages(path)
+            pages = extract_pages(path, ROOT / row["pdf"] if row["pdf"] else None)
         except Exception as e:  # noqa: BLE001 - a broken PDF shouldn't stop the index
             log(f"  ! Couldn't read {row['path']}: {e}")
             continue
@@ -147,12 +191,14 @@ def index_text(course_id=None, log=print, progress=None):
                          [(row["id"], p, t) for p, t in pages])
         conn.executemany("INSERT INTO pages_fts(text, file_id, page) VALUES(?,?,?)",
                          [(f"{row['name']}\n{t}", row["id"], p) for p, t in pages])
+        # a deck's hash is its own (set by the conversion), so friends with the same .pptx match it
+        digest = row["hash"] if row["kind"] == "office" and row["hash"] else file_hash(path)
         conn.execute("UPDATE files SET hash=?, pages=?, indexed_mtime=? WHERE id=?",
-                     (file_hash(path), len(pages), mtime, row["id"]))
+                     (digest, len(pages), mtime, row["id"]))
         changed += 1
     conn.commit()
     embedded = embed_missing(course_id, log, progress)
-    return {"files": len(rows), "reindexed": changed, "embedded": embedded}
+    return {"files": len(rows), "reindexed": changed, "embedded": embedded, **converted}
 
 
 def embed_missing(course_id=None, log=print, progress=None):

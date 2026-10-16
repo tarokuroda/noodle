@@ -193,7 +193,8 @@ class CourseSync:
         if dates:
             self.dates.append({"course": self.course["shortname"], "section": section.get("name"),
                                "type": module["modname"], "name": html.unescape(module["name"]),
-                               "url": self.module_url(module), "dates": dates})
+                               "url": self.module_url(module), "cmid": module["id"], "instance": module.get("instance"),
+                               "dates": dates})
 
     # --- writing ---
 

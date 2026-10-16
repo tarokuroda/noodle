@@ -9,7 +9,7 @@ import sys
 import numpy as np
 
 from .db import connect
-from .index import get_model
+from .index import get_model, viewer_for
 
 _vectors = {}  # course_id -> (keys [(file_id, page)], matrix)
 
@@ -87,11 +87,12 @@ def search(q, course_id, limit=12):
     conn = connect()
     out = []
     for fid, (s, page, matched, snip) in ranked:
-        f = conn.execute("SELECT id, name, path, kind, section FROM files WHERE id=?", (fid,)).fetchone()
+        f = conn.execute("SELECT id, name, path, kind, pdf, pages, section FROM files WHERE id=?", (fid,)).fetchone()
         if snip is None:
             text = conn.execute("SELECT text FROM pages WHERE file_id=? AND page=?", (fid, page)).fetchone()
             snip = re.sub(r"\s+", " ", text["text"] if text else "")[:180]
-        out.append({"file_id": fid, "name": f["name"], "path": f["path"], "kind": f["kind"], "section": f["section"],
+        out.append({"file_id": fid, "name": f["name"], "path": f["path"], "kind": f["kind"], "viewer": viewer_for(f),
+                    "section": f["section"],
                     "page": page, "snippet": re.sub(r"\s+", " ", snip).strip(), "score": round(s, 4),
                     "matched": sorted(matched)})
     return out

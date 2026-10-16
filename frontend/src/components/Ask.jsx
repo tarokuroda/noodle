@@ -26,9 +26,9 @@ function Retrieved({ hits, course, revealed }) {
       <div className="retrieved-list">
         {hits.slice(0, revealed).map((h) => (
           <span key={`${h.file_id}-${h.page}`} className="retrieved-chip">
-            {h.kind === "pdf" ? <FileText size={12} /> : <Globe size={12} />}
-            {h.name.replace(/\.pdf$/i, "")}
-            {h.kind === "pdf" && <b>p.{h.page}</b>}
+            {h.viewer === "pdf" ? <FileText size={12} /> : <Globe size={12} />}
+            {h.name.replace(/\.(pdf|pptx?|docx?)$/i, "")}
+            {h.viewer === "pdf" && <b>p.{h.page}</b>}
           </span>
         ))}
       </div>
@@ -101,7 +101,7 @@ function Answer({ msg, fresh, onCite, onAsk, onDone }) {
           <div className="sources">
             {msg.closest.map((h) => (
               <button key={`${h.file_id}-${h.page}`} className="source-chip plain" onClick={() => onCite(h.file_id, h.page)}>
-                {h.name.replace(/\.pdf$/i, "")} {h.kind === "pdf" && `— p.${h.page}`}
+                {h.name.replace(/\.(pdf|pptx?|docx?)$/i, "")} {h.viewer === "pdf" && `— p.${h.page}`}
               </button>
             ))}
           </div>

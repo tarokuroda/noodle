@@ -43,7 +43,7 @@ export default function Graph({ course, files, onOpenFile, onOpenNote, notesVers
 
   const graph = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
-    const fileOk = (n) => (n.kind === "pdf" ? show.pdf : n.kind === "page" ? show.page : show.other);
+    const fileOk = (n) => (n.viewer === "pdf" ? show.pdf : n.viewer === "page" ? show.page : show.other);
     const files_ = data.nodes.filter((n) => n.type === "file" && fileOk(n));
     const ids = new Set(files_.map((n) => n.id));
     const notes_ = show.note ? data.nodes.filter((n) => n.type === "note") : [];
@@ -246,7 +246,7 @@ export default function Graph({ course, files, onOpenFile, onOpenNote, notesVers
             </div>
           )}
           {side.type === "note" && <NotePanel key={side.path} path={side.path} course={course} onOpenFile={onOpenFile} onOpenNote={(p) => setSide({ type: "note", node: { id: `n:${p}` }, path: p })} />}
-          {side.type === "file" && sideFile && (sideFile.status !== "ok" || (sideFile.kind !== "pdf" && sideFile.kind !== "page")) && (
+          {side.type === "file" && sideFile && (sideFile.status !== "ok" || sideFile.viewer === "app") && (
             <div className="topic-card">
               <span className="badge">{sideFile.tag}</span>
               <h2>{sideFile.name}</h2>
@@ -262,7 +262,7 @@ export default function Graph({ course, files, onOpenFile, onOpenNote, notesVers
               )}
             </div>
           )}
-          {side.type === "file" && sideFile && sideFile.status === "ok" && (sideFile.kind === "pdf" || sideFile.kind === "page") && (
+          {side.type === "file" && sideFile && sideFile.status === "ok" && sideFile.viewer !== "app" && (
             <FileViewer file={sideFile} open={side} setOpen={(o) => setSide({ ...side, ...o })} compact />
           )}
         </div>

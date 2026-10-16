@@ -21,7 +21,21 @@ CREATE TABLE IF NOT EXISTS highlights(
   note_path TEXT, created REAL);
 """
 
+# Columns added after the first release; ensure_columns() adds them to an existing database.
+ADDED_COLUMNS = {
+    "files": {"twin_id": "INTEGER", "pdf": "TEXT"},  # a .pptx with a same-name PDF; a converted deck's PDF
+}
+
 _local = threading.local()
+
+
+def ensure_columns(conn):
+    for table, cols in ADDED_COLUMNS.items():
+        have = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for name, kind in cols.items():
+            if name not in have:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {kind}")
+    conn.commit()
 
 
 def connect():
@@ -33,5 +47,6 @@ def connect():
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.executescript(SCHEMA)
+        ensure_columns(conn)
         _local.conn = conn
     return conn

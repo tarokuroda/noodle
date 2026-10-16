@@ -8,19 +8,22 @@ from collections import defaultdict
 
 from . import demo, notes
 from .db import connect
+from .index import viewer_for
 from .paths import ROOT
 
 MAX_TOPICS_PER_FILE = 8
 
 
 def build(course_id):
-    rows = connect().execute("SELECT * FROM files WHERE course_id=? ORDER BY section_num, ord", (course_id,)).fetchall()
+    rows = connect().execute("SELECT * FROM files WHERE course_id=? AND twin_id IS NULL ORDER BY section_num, ord",
+                             (course_id,)).fetchall()
     nodes, links = [], []
     topic_files = defaultdict(list)
     prev_in_section = {}
     for r in rows:
         nid = f"f{r['id']}"
         nodes.append({"id": nid, "type": "file", "label": r["name"], "file_id": r["id"], "kind": r["kind"],
+                      "viewer": viewer_for(r),
                       "tag": demo.tag_for(r["path"], r["name"], r["kind"]), "status": r["status"],
                       "section": r["section"], "section_num": r["section_num"]})
         prev = prev_in_section.get(r["section_num"])

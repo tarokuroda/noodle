@@ -75,14 +75,14 @@ export default function NotePanel({ path, course, onOpenFile, onOpenNote, refres
             const m = ctx.matchBefore(/\[\[[^\]\n]*/);
             if (!m) return null;
             const q = m.text.slice(2).toLowerCase();
-            const rank = { pdf: 0, note: 1, page: 2 };
+            const rank = { pdf: 0, office: 0, note: 1, page: 2 };
             const options = targets.current
               .filter((t) => !q || t.name.toLowerCase().includes(q) || t.link.toLowerCase().includes(q))
               .sort((a, b) => (rank[a.kind] ?? 3) - (rank[b.kind] ?? 3))
               .slice(0, 40)
               .map((t) => ({
                 label: t.name,
-                detail: t.type === "note" ? "note" : t.kind === "pdf" ? "PDF" : t.kind === "page" ? "Moodle page" : "file",
+                detail: t.type === "note" ? "note" : t.kind === "pdf" ? "PDF" : t.kind === "page" ? "Moodle page" : t.kind === "office" ? "slides" : "file",
                 apply: (view, _c, from, to) => {
                   const after = view.state.sliceDoc(to, to + 2);
                   const end = to + (after === "]]" ? 2 : after.startsWith("]") ? 1 : 0);
