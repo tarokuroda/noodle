@@ -1,0 +1,5 @@
+# Saved Moodle token and sync manifest
+.noodle/
+# Downloaded course material (copyrighted, never commit)
+vault/
+__pycache__/
