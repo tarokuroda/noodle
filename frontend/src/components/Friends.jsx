@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, FolderSync, Highlighter, Inbox, NotebookPen, Send, Share2, UserPlus, Users, X } from "lucide-react";
+import Avatar from "./Avatar.jsx";
 import ShareDialog from "./ShareDialog.jsx";
 import { api } from "../api.js";
 
@@ -10,14 +11,6 @@ const ago = (ts) => {
   if (s < 86400) return `${Math.round(s / 3600)} h ago`;
   return new Date(ts * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 };
-
-function Avatar({ who, size }) {
-  return (
-    <span className={`avatar ${size || ""}`} style={{ background: who?.color || "#8b93a7" }}>
-      {(who?.name || "?").slice(0, 1).toUpperCase()}
-    </span>
-  );
-}
 
 function Setup({ data, onDone }) {
   const [name, setName] = useState("");

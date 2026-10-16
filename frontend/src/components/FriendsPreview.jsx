@@ -1,3 +1,4 @@
+import Avatar from "./Avatar.jsx";
 import { Highlighter, NotebookPen, Share2, UserPlus, Users } from "lucide-react";
 
 // Sample data for the preview: fictional classmates, no real accounts or sharing yet.
@@ -37,7 +38,7 @@ export default function FriendsPreview({ course }) {
           </h2>
           {FRIENDS.map((f) => (
             <div key={f.name} className="friend">
-              <span className="avatar" style={{ background: f.color }}>{f.initials}</span>
+              <Avatar who={f} />
               <div>
                 <b>{f.name}</b>
                 <span className="muted small">{f.status}</span>
@@ -51,7 +52,7 @@ export default function FriendsPreview({ course }) {
             const Icon = e.icon;
             return (
               <div key={i} className="feed-item">
-                <span className="avatar" style={{ background: f.color }}>{f.initials}</span>
+                <Avatar who={f} />
                 <div className="feed-text">
                   <p>
                     <b>{f.name.split(" ")[0]}</b> {e.what} <b>{e.on}</b>

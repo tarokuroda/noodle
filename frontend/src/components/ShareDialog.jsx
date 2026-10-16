@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NotebookPen, Share2, X } from "lucide-react";
 import { api } from "../api.js";
+import Avatar from "./Avatar.jsx";
 
 /** Pick friends and notes, then share: only the notes and their highlights go into the shared folder. */
 export default function ShareDialog({ course, initial = [], onClose, onShared }) {
@@ -61,7 +62,7 @@ export default function ShareDialog({ course, initial = [], onClose, onShared })
               {info.friends.map((f) => (
                 <label key={f.id} className="pick">
                   <input type="checkbox" checked={to.has(f.id)} onChange={() => toggle(to, setTo, f.id)} />
-                  <span className="avatar sm" style={{ background: f.color }}>{f.name.slice(0, 1)}</span>
+                  <Avatar who={f} size="sm" />
                   {f.name}
                 </label>
               ))}
