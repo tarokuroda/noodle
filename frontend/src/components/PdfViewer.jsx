@@ -51,8 +51,16 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
     if (el) scroller.current.scrollTop = el.offsetTop - 20;
   };
 
+  const currentRef = useRef(1);
   useEffect(() => {
-    const ro = new ResizeObserver(([e]) => setWidth(Math.max(320, Math.min(980, e.contentRect.width - 48))));
+    const ro = new ResizeObserver(([e]) => {
+      // keep the page you're reading in view when the panel next to the PDF opens or closes
+      if (!jumpRef.current && currentRef.current > 1) {
+        jumpRef.current = currentRef.current;
+        setTimeout(() => (jumpRef.current = null), 1500);
+      }
+      setWidth(Math.max(320, Math.min(980, e.contentRect.width - 48)));
+    });
     ro.observe(scroller.current);
     return () => ro.disconnect();
   }, []);
@@ -92,6 +100,7 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
     if (el) {
       align(target);
       jumpRef.current = target;
+      currentRef.current = target;
       const release = setTimeout(() => (jumpRef.current = null), 3000);
       setCurrent(target);
       if (flashPage !== false && target > 1) {
@@ -117,6 +126,7 @@ export default function PdfViewer({ file, page = 1, nonce, highlights = [], onHi
       if (el.offsetTop <= y) n = +el.dataset.page;
       else break;
     }
+    if (!jumpRef.current) currentRef.current = n;
     setCurrent(n);
     setPending(null);
   }, []);

@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, ExternalLink, NotebookPen, X } from "lucide-react";
+import NotePanel from "./NotePanel.jsx";
 import PdfViewer from "./PdfViewer.jsx";
 import Logo from "./Logo.jsx";
-import { tagColor } from "../api.js";
+import { api, tagColor } from "../api.js";
 
-export function FileViewer({ file, open, setOpen, highlights, onHighlight, compact = false }) {
+export function FileViewer({ file, open, setOpen, highlights, onHighlight, compact = false, actions = null }) {
   const [pos, setPos] = useState({ current: 1, num: 0 });
   const jump = (n) => setOpen({ id: file.id, page: n, nonce: Date.now() });
   return (
@@ -32,6 +33,7 @@ export function FileViewer({ file, open, setOpen, highlights, onHighlight, compa
             </button>
           </div>
         )}
+        {actions}
         {!compact && file.moodle_url && (
           <a className="btn" href={file.moodle_url} target="_blank" rel="noreferrer">
             <ExternalLink size={14} /> Moodle
@@ -73,6 +75,61 @@ export function EmptyLibrary({ course }) {
             : "Sync a course to get started."}
         </p>
       </div>
+    </div>
+  );
+}
+
+/** The library's main area: a file (with its highlights and note beside it) or a note on its own. */
+export function LibraryView({ course, file, open, setOpen, sideNote, setSideNote, mainNote, onOpenFile, onOpenNote, onNotesChanged }) {
+  const [highlights, setHighlights] = useState([]);
+  const [noteKey, setNoteKey] = useState(0);
+
+  useEffect(() => {
+    setHighlights([]);
+    if (file?.kind === "pdf") api(`/highlights?file=${file.id}`).then(setHighlights);
+  }, [file?.id]);
+
+  const onHighlight = async (sel) => {
+    const res = await api("/highlights", { method: "POST", body: { file_id: file.id, page: sel.page, rects: sel.rects, text: sel.text } });
+    setHighlights((h) => [...h, res.highlight]);
+    setSideNote(res.note_path);
+    setNoteKey((k) => k + 1);
+    onNotesChanged();
+  };
+
+  const toggleNote = async () => {
+    if (sideNote) return setSideNote(null);
+    const res = await api(`/files/${file.id}/note?create=true`);
+    setSideNote(res.path);
+    onNotesChanged();
+  };
+
+  if (!file && mainNote) {
+    return <NotePanel key={mainNote} path={mainNote} course={course} onOpenFile={onOpenFile} onOpenNote={onOpenNote} />;
+  }
+  if (!file) return <EmptyLibrary course={course} />;
+  return (
+    <div className="split">
+      <FileViewer
+        file={file}
+        open={open}
+        setOpen={setOpen}
+        highlights={highlights}
+        onHighlight={file.kind === "pdf" ? onHighlight : undefined}
+        actions={
+          <button className={`btn ${sideNote ? "yellow" : ""}`} onClick={toggleNote}>
+            <NotebookPen size={14} /> Notes
+          </button>
+        }
+      />
+      {sideNote && (
+        <div className="note-side">
+          <button className="icon-btn side-close" onClick={() => setSideNote(null)} aria-label="Close note">
+            <X size={18} />
+          </button>
+          <NotePanel key={sideNote} path={sideNote} course={course} refreshKey={noteKey} onOpenFile={onOpenFile} onOpenNote={onOpenNote} />
+        </div>
+      )}
     </div>
   );
 }

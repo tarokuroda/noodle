@@ -7,7 +7,6 @@ Links use Obsidian syntax, so the vault opens in Obsidian unchanged:
 """
 
 import re
-import time
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -100,17 +99,23 @@ def resolve(target, course_id, targets=None):
     return None
 
 
+def file_note(course_id, file_row, create=False):
+    """The note that belongs to one file ("Notes on <file>.md"), created on demand."""
+    title = f"Notes on {Path(file_row['path']).stem}"
+    p = notes_dir(course_id) / f"{safe_title(title)}.md"
+    if create and not p.exists():
+        link = next((t["link"] for t in link_targets(course_id) if t.get("id") == file_row["id"]),
+                    Path(file_row["path"]).name)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(f"# {title}\n\nSource: [[{link}]]\n\n", encoding="utf-8")
+    return p if p.exists() else None
+
+
 def append_quote(course_id, file_row, page, text):
     """A highlight lands in that file's note as a quote with a p.N link back to the page."""
-    title = f"Notes on {Path(file_row['path']).stem}"
-    d = notes_dir(course_id)
-    p = d / f"{safe_title(title)}.md"
+    p = file_note(course_id, file_row, create=True)
     link = next((t["link"] for t in link_targets(course_id) if t.get("id") == file_row["id"]), Path(file_row["path"]).name)
-    if not p.exists():
-        d.mkdir(parents=True, exist_ok=True)
-        p.write_text(f"# {title}\n\nSource: [[{link}]]\n\n", encoding="utf-8")
     quote = "\n".join(f"> {line}" for line in text.strip().splitlines() or [""])
-    block = f"{quote}\n> — [[{link}#page={page}|p.{page}]]\n\n"
-    existing = p.read_text(encoding="utf-8")
-    p.write_text(existing.rstrip("\n") + "\n\n" + block, encoding="utf-8")
-    return p, time.time()
+    block = f"{quote}\n> [[{link}#page={page}|p.{page}]]\n\n"
+    p.write_text(p.read_text(encoding="utf-8").rstrip("\n") + "\n\n" + block, encoding="utf-8")
+    return p

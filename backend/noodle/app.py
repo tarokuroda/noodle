@@ -3,8 +3,10 @@
     python -m uvicorn noodle.app:app --app-dir backend --port 8765
 """
 
+import json
 import os
 import re
+import time
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -185,3 +187,42 @@ def note_save(body: NoteSave):
     p = notes.note_path(body.path)
     p.write_text(body.content, encoding="utf-8")
     return {"ok": True}
+
+
+# ---------- highlights ----------
+
+class HighlightIn(BaseModel):
+    file_id: int
+    page: int
+    rects: list[dict]
+    text: str
+
+
+def _highlight_out(r):
+    return {"id": r["id"], "page": r["page"], "rects": json.loads(r["rects"]), "text": r["text"], "note_path": r["note_path"]}
+
+
+@app.get("/api/highlights")
+def highlights(file: int):
+    rows = connect().execute("SELECT * FROM highlights WHERE file_id=? ORDER BY id", (file,)).fetchall()
+    return [_highlight_out(r) for r in rows]
+
+
+@app.post("/api/highlights")
+def add_highlight(body: HighlightIn):
+    row = file_row(body.file_id)
+    note = notes.append_quote(row["course_id"], row, body.page, body.text)
+    rel = note.relative_to(ROOT).as_posix()
+    conn = connect()
+    cur = conn.execute("INSERT INTO highlights(file_id, file_hash, page, rects, text, note_path, created) VALUES(?,?,?,?,?,?,?)",
+                       (row["id"], row["hash"], body.page, json.dumps(body.rects), body.text, rel, time.time()))
+    conn.commit()
+    hl = conn.execute("SELECT * FROM highlights WHERE id=?", (cur.lastrowid,)).fetchone()
+    return {"highlight": _highlight_out(hl), "note_path": rel}
+
+
+@app.get("/api/files/{fid}/note")
+def file_note(fid: int, create: bool = False):
+    row = file_row(fid)
+    p = notes.file_note(row["course_id"], row, create=create)
+    return {"path": p.relative_to(ROOT).as_posix() if p else None}

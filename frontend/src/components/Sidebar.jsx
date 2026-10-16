@@ -46,7 +46,8 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
   const [tags, setTags] = useState(new Set());
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
-  const [expanded, setExpanded] = useState(new Set());
+  const [expanded, setExpanded] = useState(new Set(["notes"]));
+  const [naming, setNaming] = useState(false);
 
   useEffect(() => {
     if (!query.trim() || !course) {
@@ -182,11 +183,25 @@ export default function Sidebar({ view, setView, course, files, notes = [], open
                             <span className="fname">{n.title}</span>
                           </button>
                         ))}
-                        {onNewNote && (
-                          <button className="file muted" onClick={onNewNote}>
-                            <NotebookPen size={15} /> <span className="fname">New note…</span>
-                          </button>
-                        )}
+                        {onNewNote &&
+                          (naming ? (
+                            <form
+                              className="new-note"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const title = e.currentTarget.elements.title.value.trim();
+                                setNaming(false);
+                                if (title) onNewNote(title);
+                              }}
+                            >
+                              <NotebookPen size={15} />
+                              <input name="title" autoFocus placeholder="Name your note" onBlur={() => setNaming(false)} aria-label="New note name" />
+                            </form>
+                          ) : (
+                            <button className="file muted" onClick={() => setNaming(true)}>
+                              <NotebookPen size={15} /> <span className="fname">New note…</span>
+                            </button>
+                          ))}
                       </>
                     )}
                   </div>

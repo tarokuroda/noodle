@@ -287,3 +287,10 @@ h1, h2, h3, .display { font-family: "Fredoka", "Nunito", sans-serif; font-weight
 .note-add { display: block; width: 100%; text-align: left; margin-top: 10px; border: 1px dashed var(--line); background: none; border-radius: var(--r-md); padding: 10px 14px; color: var(--ink-3); font-weight: 700; }
 .note-add:hover { border-color: var(--indigo); color: var(--indigo); }
 .cm-editor .cm-scroller { font-family: Nunito, sans-serif; }
+
+/* ---------- library split ---------- */
+.split { flex: 1; display: flex; min-height: 0; }
+.note-side { width: min(42%, 560px); border-left: 1px solid var(--line); display: flex; position: relative; min-height: 0; animation: side-in 0.22s ease-out; }
+.note-side .bar { padding-right: 52px; }
+.new-note { display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 26px; color: var(--ink-3); }
+.new-note input { flex: 1; border: 1px solid var(--indigo); border-radius: 8px; padding: 4px 8px; outline: none; font-size: 14px; }

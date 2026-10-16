@@ -38,3 +38,15 @@ def test_search_finds_course_material():
         return  # nothing synced on this machine
     hits = search("nozzle flow", course["id"])
     assert hits and all({"file_id", "page", "name", "snippet"} <= set(h) for h in hits)
+
+
+def test_wikilinks_parse_and_resolve():
+    from noodle import notes
+    found = notes.links("See [[Lecture 3.pdf#page=12|p.12]] and [[My note]].")
+    assert found == [("Lecture 3.pdf", "page=12", "p.12"), ("My note", None, None)]
+    course = connect().execute("SELECT id FROM courses ORDER BY synced_at DESC").fetchone()
+    if course is None:
+        return
+    targets = notes.link_targets(course["id"])
+    pdf = next(t for t in targets if t["kind"] == "pdf")
+    assert notes.resolve(pdf["link"], course["id"], targets) == ("file", pdf["id"])
